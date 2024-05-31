@@ -8,7 +8,7 @@ from models.uuid_registry import UuidRegistry
 class OrganisationsModel(BaseModel):
 	__tablename__ = 'organisations'
 
-	id = Column(Integer, primary_key=True, autoincrement=True)
+	_id = Column(Integer, name="id", primary_key=True, autoincrement=True)
 	name = Column(String(255), nullable=False)
 	country = Column(String(255), nullable=False)
 	full_address = Column(String(255), nullable=True)

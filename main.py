@@ -1,6 +1,7 @@
 import asyncio
-import time
+import logging
 
+from dotenv import load_dotenv
 from fastapi import FastAPI, Query
 from fastapi.responses import FileResponse
 from gssapi import SecurityContext
@@ -13,10 +14,17 @@ import gssapi
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.middleware.cors import CORSMiddleware
 
+from starlette.middleware.base import BaseHTTPMiddleware
 from storage import db_instance
+from logger import uvicorn_logger, log_middleware, get_uvicorn_logger_config
 
+load_dotenv()
+
+logging.config.dictConfig(get_uvicorn_logger_config())
 
 app = FastAPI()
+app.add_middleware(BaseHTTPMiddleware, dispatch=log_middleware)
+uvicorn_logger.info("Starting API..")
 
 app.add_middleware(
     CORSMiddleware,
@@ -54,6 +62,7 @@ async def gssapi_authenticate(request: Request):
 
     response = {"message": "success", "principal": principal}
     return response
+
 
 @app.get("/protected")
 async def protected_route(credentials: HTTPAuthorizationCredentials = Depends(kerberos_auth)):

@@ -6,8 +6,8 @@ from models import BaseModel
 class DrugsModel(BaseModel):
 	__tablename__ = 'drugs'
 
-	id = Column(Integer, primary_key=True, autoincrement=True)
-	drug_ref = Column(String(7), unique=True, nullable=False, index=True) #[A-Za-z][0-9]^6
+	_id = Column(Integer, name="id", primary_key=True, autoincrement=True)
+	drug_ref = Column(String(7), unique=True, nullable=False, index=True)  # [A-Za-z][0-9]^6
 	drug_name = Column(String(255), nullable=False)
 	brand_name = Column(String(255), nullable=False)  # Note: multiple -> each drug
 	indications = Column(Text, nullable=False)

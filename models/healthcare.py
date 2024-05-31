@@ -6,7 +6,7 @@ from models import BaseModel
 class HealthcareModel(BaseModel):
 	__tablename__ = 'healthcare_organization'
 
-	id = Column(Integer, primary_key=True, autoincrement=True)
+	_id = Column(Integer, name="id", primary_key=True, autoincrement=True)
 	name = Column(String(255), nullable=False)
 	country = Column(String(255), nullable=False)
 	full_address = Column(String(255), nullable=True)

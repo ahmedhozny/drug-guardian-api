@@ -3,7 +3,8 @@ from fastapi import APIRouter, Query, HTTPException
 import schemes.drug
 from models import DDIModel
 from schemes import DDIChecker
-from services.drugs import search_for_drug, get_drug_by_ref, interaction_checker_service
+from services.drug_interactions import interaction_checker_service
+from services.drugs import search_for_drug, get_drug_by_ref
 from storage import db_instance
 
 router = APIRouter()
