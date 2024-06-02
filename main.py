@@ -2,12 +2,10 @@ import logging
 
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, Request
-from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
-from starlette.middleware.base import BaseHTTPMiddleware
 
 from authentication.http import get_auth_header, authenticate_kerberos
-from logger import uvicorn_logger, log_middleware, get_uvicorn_logger_config
+from logger import uvicorn_logger, get_uvicorn_logger_config
 from routes import drugs_route, account_route, download_route
 from storage import db_instance
 
@@ -16,16 +14,16 @@ load_dotenv()
 logging.config.dictConfig(get_uvicorn_logger_config())
 
 app = FastAPI()
-app.add_middleware(BaseHTTPMiddleware, dispatch=log_middleware)
+# app.add_middleware(BaseHTTPMiddleware, dispatch=log_middleware)
 uvicorn_logger.info("Starting API..")
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["GET"],
-    allow_headers=["*"],
-)
+# app.add_middleware(
+#     CORSMiddleware,
+#     allow_origins=["*"],
+#     allow_credentials=True,
+#     allow_methods=["GET"],
+#     allow_headers=["*"],
+# )
 
 db_instance.reload()
 
