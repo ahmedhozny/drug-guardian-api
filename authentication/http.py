@@ -5,6 +5,7 @@ import gssapi
 import base64
 
 logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.DEBUG)
 
 
 def get_auth_header(request: Request):
