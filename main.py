@@ -1,22 +1,15 @@
-import asyncio
 import logging
 
 from dotenv import load_dotenv
-from fastapi import FastAPI, Query
-from fastapi.responses import FileResponse
-from gssapi import SecurityContext
-
-from routes import drugs_route, account_route, download_route
-from authentication.kerberos import KerberosAuth
-
-from fastapi import FastAPI, Depends, HTTPException, Request
-import gssapi
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-
+from fastapi.responses import FileResponse, JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
-from storage import db_instance
+
+from authentication.http import get_auth_header, authenticate_kerberos
 from logger import uvicorn_logger, log_middleware, get_uvicorn_logger_config
+from routes import drugs_route, account_route, download_route
+from storage import db_instance
 
 load_dotenv()
 
@@ -34,8 +27,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-kerberos_auth = KerberosAuth()
-
 db_instance.reload()
 
 app.include_router(drugs_route.router, prefix="/drugs", tags=["drugs"])
@@ -43,30 +34,23 @@ app.include_router(account_route.router, prefix="/account", tags=["account"])
 app.include_router(download_route.router, prefix="/download", tags=["download"])
 
 
-@app.get("/http")
-async def gssapi_authenticate(request: Request):
-    auth_header = request.headers.get("Authorization")
-    if not auth_header or not auth_header.startswith("Negotiate "):
-        raise HTTPException(status_code=401, detail="Unauthorized")
-
+@app.middleware("http")
+async def kerberos_auth_middleware(request: Request, call_next):
     try:
-        token = auth_header.split(" ")[1]
-        context = gssapi.SecurityContext(creds=None, usage='accept')
-        context.step(gssapi.base64_to_bytes(token))
-        principal = context.initiator_name
-        # Now you can authenticate 'principal' against your user database or LDAP
-        # For demo purposes, we'll just print it
-        print("Authenticated principal:", principal)
-    except Exception as e:
-        raise HTTPException(status_code=401, detail="Unauthorized")
+        token = get_auth_header(request)
+        principal = authenticate_kerberos(token)
+        request.state.principal = principal
+    except HTTPException as e:
+        return JSONResponse(status_code=e.status_code, content={"detail": e.detail})
 
-    response = {"message": "success", "principal": principal}
+    response = await call_next(request)
     return response
 
 
 @app.get("/protected")
-async def protected_route(credentials: HTTPAuthorizationCredentials = Depends(kerberos_auth)):
-    return {"message": "You are authorized!"}
+async def protected_route(request: Request):
+    principal = request.state.principal
+    return {"message": f"Hello, {principal}"}
 
 
 @app.get("/")
