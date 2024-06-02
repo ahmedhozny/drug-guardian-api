@@ -35,8 +35,8 @@ app.include_router(download_route.router, prefix="/download", tags=["download"])
 @app.middleware("http")
 async def kerberos_auth_middleware(request: Request, call_next):
     try:
+        print(request.headers)
         token = get_auth_header(request)
-        logging.debug(f"Received token: {token}")
         principal = authenticate_kerberos(token)
         request.state.principal = principal
     except HTTPException as e:

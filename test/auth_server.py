@@ -13,6 +13,7 @@ logger = logging.getLogger('auth_server')
 class KerberosMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
         auth_header = request.headers.get('Authorization')
+        print(auth_header)
         if not auth_header or not auth_header.startswith('Negotiate '):
             logger.info("No Authorization header or not starting with Negotiate")
             return JSONResponse(status_code=401, content={"detail": "Unauthorized"})
