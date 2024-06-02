@@ -36,14 +36,15 @@ app.include_router(download_route.router, prefix="/download", tags=["download"])
 async def kerberos_auth_middleware(request: Request, call_next):
     try:
         token = get_auth_header(request)
+        logging.debug(f"Received token: {token}")
         principal = authenticate_kerberos(token)
         request.state.principal = principal
     except HTTPException as e:
+        logging.error(f"Authentication failed: {e.detail}")
         return JSONResponse(status_code=e.status_code, content={"detail": e.detail})
 
     response = await call_next(request)
     return response
-
 
 @app.get("/protected")
 async def protected_route(request: Request):
