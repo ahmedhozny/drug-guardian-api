@@ -1,3 +1,4 @@
+import logging
 from fastapi import FastAPI, Request, HTTPException
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import JSONResponse
@@ -6,14 +7,15 @@ import kerberos
 
 app = FastAPI()
 
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
 
 class KerberosMiddleware(BaseHTTPMiddleware):
-    def __init__(self, app: FastAPI):
-        super().__init__(app)
-
     async def dispatch(self, request: Request, call_next):
         auth_header = request.headers.get('Authorization')
         if not auth_header or not auth_header.startswith('Negotiate '):
+            logger.info("No Authorization header or not starting with Negotiate")
             return JSONResponse(status_code=401, content={"detail": "Unauthorized"})
 
         token = auth_header[len('Negotiate '):]
@@ -25,7 +27,10 @@ class KerberosMiddleware(BaseHTTPMiddleware):
 
             username = kerberos.authGSSServerUserName(context)
             request.state.user = username
+            kerberos.authGSSServerClean(context)
+            logger.info(f"Authenticated user: {username}")
         except kerberos.GSSError as e:
+            logger.error(f"Kerberos authentication failed: {e}")
             raise HTTPException(status_code=401, detail="Kerberos authentication failed")
 
         response = await call_next(request)
