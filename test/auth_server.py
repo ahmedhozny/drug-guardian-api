@@ -2,13 +2,12 @@ import logging
 from fastapi import FastAPI, Request, HTTPException
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import JSONResponse
-
 import kerberos
 
 app = FastAPI()
 
 logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('auth_server')
 
 
 class KerberosMiddleware(BaseHTTPMiddleware):
@@ -21,6 +20,9 @@ class KerberosMiddleware(BaseHTTPMiddleware):
         token = auth_header[len('Negotiate '):]
         try:
             result, context = kerberos.authGSSServerInit('HTTP')
+            if result != kerberos.AUTH_GSS_COMPLETE:
+                raise HTTPException(status_code=401, detail="Unauthorized")
+
             kerberos.authGSSServerStep(context, token)
             if kerberos.authGSSServerResponse(context) != 'complete':
                 raise HTTPException(status_code=401, detail="Unauthorized")
