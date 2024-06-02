@@ -17,8 +17,7 @@ def authenticate_kerberos(token: str):
         token = base64.b64decode(token)
 
         # Initialize the security context
-        server_name = gssapi.Name('HTTP@kerberos.drugguardian.net', name_type=gssapi.NameType.hostbased_service)
-        server_ctx = gssapi.SecurityContext(usage='accept', name=server_name)
+        server_ctx = gssapi.SecurityContext(usage='accept')
 
         # Step through the GSSAPI handshake
         server_ctx.step(token)
