@@ -1,0 +1,51 @@
+from fastapi import FastAPI, Request, HTTPException
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.responses import JSONResponse
+
+import kerberos
+
+app = FastAPI()
+
+
+class KerberosMiddleware(BaseHTTPMiddleware):
+    def __init__(self, app: FastAPI):
+        super().__init__(app)
+
+    async def dispatch(self, request: Request, call_next):
+        auth_header = request.headers.get('Authorization')
+        if not auth_header or not auth_header.startswith('Negotiate '):
+            return JSONResponse(status_code=401, content={"detail": "Unauthorized"})
+
+        token = auth_header[len('Negotiate '):]
+        try:
+            result, context = kerberos.authGSSServerInit('HTTP')
+            kerberos.authGSSServerStep(context, token)
+            if kerberos.authGSSServerResponse(context) != 'complete':
+                raise HTTPException(status_code=401, detail="Unauthorized")
+
+            username = kerberos.authGSSServerUserName(context)
+            request.state.user = username
+        except kerberos.GSSError as e:
+            raise HTTPException(status_code=401, detail="Kerberos authentication failed")
+
+        response = await call_next(request)
+        return response
+
+
+app.add_middleware(KerberosMiddleware)
+
+
+@app.get("/secure-data")
+async def get_secure_data(request: Request):
+    return {"message": f"Hello, {request.state.user}. You have accessed secure data!"}
+
+
+@app.get("/")
+async def read_root():
+    return {"message": "This is a public endpoint."}
+
+
+if __name__ == '__main__':
+    import uvicorn
+
+    uvicorn.run(app, host="0.0.0.0", port=8000)
