@@ -10,6 +10,7 @@ logging.basicConfig(level=logging.DEBUG)
 
 def get_auth_header(request: Request):
     auth_header = request.headers.get('Authorization')
+    logger.debug(f"Authorization header: {auth_header}")
     if not auth_header or not auth_header.startswith('Negotiate '):
         logger.error("Missing or invalid Authorization header")
         raise HTTPException(status_code=401, detail="Missing or invalid Authorization header")

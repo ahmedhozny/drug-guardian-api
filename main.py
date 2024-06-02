@@ -46,6 +46,7 @@ async def kerberos_auth_middleware(request: Request, call_next):
     response = await call_next(request)
     return response
 
+
 @app.get("/protected")
 async def protected_route(request: Request):
     principal = request.state.principal
