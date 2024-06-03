@@ -42,7 +42,7 @@ async def kerberos_auth_middleware(request: Request, call_next):
         request.state.principal = principal
     except HTTPException as e:
         logging.error(f"Authentication failed: {e.detail}")
-        return JSONResponse(status_code=e.status_code, content={"detail": e.detail})
+        return JSONResponse(status_code=e.status_code, content={"detail": e.detail}, headers={"WWW-Authenticate": "Negotiate"})
 
     response = await call_next(request)
     return response
