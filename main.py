@@ -1,7 +1,7 @@
 import logging
 
 from dotenv import load_dotenv
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException, Request, Depends
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -33,8 +33,7 @@ app.include_router(account_route.router, prefix="/account", tags=["account"])
 app.include_router(download_route.router, prefix="/download", tags=["download"])
 
 
-@app.middleware("http")
-async def kerberos_auth_middleware(request: Request, call_next):
+async def kerberos_auth_dependency(request: Request):
     try:
         print(request.headers)
         token = get_auth_header(request)
@@ -44,11 +43,8 @@ async def kerberos_auth_middleware(request: Request, call_next):
         logging.error(f"Authentication failed: {e.detail}")
         return JSONResponse(status_code=e.status_code, content={"detail": e.detail}, headers={"WWW-Authenticate": "Negotiate"})
 
-    response = await call_next(request)
-    return response
 
-
-@app.get("/protected")
+@app.get("/protected", dependencies=[Depends(kerberos_auth_dependency)])
 async def protected_route(request: Request):
     principal = request.state.principal
     return {"message": f"Hello, {principal}"}
