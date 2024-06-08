@@ -2,7 +2,7 @@ fastapi~=0.110.2
 uvicorn
 sqlalchemy~=2.0.30
 pydantic[email]~=2.7.0
-mysqlclient
+mysqlclient==2.1.0
 gssapi~=1.8.3
 python-dotenv~=1.0.0
 uuid~=1.30
