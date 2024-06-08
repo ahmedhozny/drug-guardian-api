@@ -3,31 +3,32 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Protected Resource</title>
+    <title>Kerberos Auth Example</title>
+    <script>
+        async function fetchProtectedResource() {
+            try {
+                const response = await fetch('http://api.drugguardian.net/protected', {
+                    method: 'GET',
+                    credentials: 'include' // Ensure cookies (and thus Kerberos tickets) are sent with the request
+                });
+
+                if (!response.ok) {
+                    throw new Error('Network response was not ok: ' + response.statusText);
+                }
+
+                const data = await response.json();
+                console.log(data);
+                document.getElementById('response').innerText = JSON.stringify(data, null, 2);
+            } catch (error) {
+                console.error('Fetch error:', error);
+                document.getElementById('response').innerText = 'Error: ' + error.message;
+            }
+        }
+    </script>
 </head>
 <body>
-    <button id="fetch-data">Fetch Protected Data</button>
-    <pre id="output"></pre>
-
-    <script>
-        document.getElementById('fetch-data').addEventListener('click', () => {
-            fetch('http://api.drugguardian.net/protected', {
-                method: 'GET',
-                credentials: 'include'
-            })
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error('Network response was not ok ' + response.statusText);
-                }
-                return response.json();
-            })
-            .then(data => {
-                document.getElementById('output').textContent = JSON.stringify(data, null, 2);
-            })
-            .catch(error => {
-                console.error('There has been a problem with your fetch operation:', error);
-            });
-        });
-    </script>
+    <h1>Kerberos Auth Example</h1>
+    <button onclick="fetchProtectedResource()">Fetch Protected Resource</button>
+    <pre id="response"></pre>
 </body>
 </html>
