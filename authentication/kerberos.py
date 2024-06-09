@@ -5,6 +5,7 @@ from datetime import datetime, timedelta
 import jwt
 
 import gssapi
+import spnego
 from fastapi import Request, HTTPException, Depends
 from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -28,24 +29,25 @@ def authenticate_kerberos(token: str):
         # Decode the base64 encoded token
         token = base64.b64decode(token)
 
-        # Initialize the security context
-        server_ctx = gssapi.SecurityContext(usage='accept')
+        # Initialize the SPNEGO context
+        context = spnego.server()
+        response_token = context.step(token)
 
-        # Step through the GSSAPI handshake
-        server_ctx.step(token)
-
-        if not server_ctx.complete:
-            logger.error("Incomplete Kerberos authentication")
-            raise HTTPException(status_code=401, detail="Incomplete Kerberos authentication")
+        if not context.complete:
+            logger.error("Incomplete SPNEGO authentication")
+            raise HTTPException(status_code=401, detail="Incomplete SPNEGO authentication")
 
         # Extract the principal of the authenticated user
-        principal = str(server_ctx.initiator_name)
+        principal = context.peer_name
         logger.info(f"Authenticated principal: {principal}")
 
-        return principal
-    except gssapi.exceptions.GSSError as e:
-        logger.error(f"Kerberos authentication failed: {e}")
-        raise HTTPException(status_code=401, detail="Kerberos authentication failed") from e
+        response_header = {
+            "WWW-Authenticate": "Negotiate " + base64.b64encode(response_token).decode()
+        }
+        return principal, response_header
+    except spnego.exceptions.SpnegoError as e:
+        logger.error(f"SPNEGO authentication failed: {e}")
+        raise HTTPException(status_code=401, detail="SPNEGO authentication failed") from e
 
 
 class KerberosMiddleware(BaseHTTPMiddleware):
@@ -65,9 +67,16 @@ class KerberosMiddleware(BaseHTTPMiddleware):
         response = await call_next(request)
         return response
 
+from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm, HTTPBearer
+from fastapi import Security
 
-SECRET_KEY = "your_secret_key"
+SECRET_KEY = "your_secret_key"  # Change this to your secret key
 ALGORITHM = "HS256"
+ACCESS_TOKEN_EXPIRE_MINUTES = 30
+
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+security = HTTPBearer()
+
 
 def create_access_token(data: dict, expires_delta: timedelta = None):
     to_encode = data.copy()
@@ -80,22 +89,15 @@ def create_access_token(data: dict, expires_delta: timedelta = None):
     return encoded_jwt
 
 
-from fastapi.security import OAuth2PasswordBearer
-
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
-
-
-async def get_current_user(token: str = Depends(oauth2_scheme)):
-    credentials_exception = HTTPException(
-        status_code=401,
-        detail="Could not validate credentials",
-        headers={"WWW-Authenticate": "Bearer"},
-    )
+def verify_token(token: str):
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         username: str = payload.get("sub")
         if username is None:
-            raise credentials_exception
+            raise HTTPException(status_code=401, detail="Invalid authentication credentials")
+        return username
     except Exception:
-        raise credentials_exception
-    return username
+        raise HTTPException(status_code=401, detail="Invalid authentication credentials")
+
+async def get_current_user(token: str = Depends(security)):
+    return verify_token(token)

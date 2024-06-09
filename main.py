@@ -1,7 +1,7 @@
 import logging
 
 from dotenv import load_dotenv
-from fastapi import FastAPI, HTTPException, Request, Depends
+from fastapi import FastAPI, HTTPException, Request, Depends, Security
 from fastapi.openapi.utils import get_openapi
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
@@ -53,7 +53,7 @@ async def kerberos_auth_dependency(request: Request):
 
 
 @app.get("/protected", dependencies=[Depends(get_current_user)])
-async def protected_route(request: Request):
+async def protected_route(request: Request, current_user: str = Security(get_current_user)):
     principal = request.state.principal
     return {"message": f"Hello, {principal}"}
 
@@ -68,23 +68,8 @@ def favicon():
     return FileResponse("favicon.ico")
 
 
-@app.get("/openapi.json", include_in_schema=False)
-async def custom_openapi():
-    return get_openapi(
-        title="FastAPI Kerberos Auth",
-        version="1.0.0",
-        description="API with Kerberos authentication",
-        routes=app.routes,
-    )
-
-
 @app.post("/token", response_model=TokenResponse, dependencies=[Depends(kerberos_auth_dependency)])
 async def generate_token(request: Request):
     principal = request.state.principal
     access_token = create_access_token(data={"sub": principal})
     return {"access_token": access_token, "token_type": "bearer"}
-
-
-@app.get("/docs1", include_in_schema=False)
-async def custom_swagger_ui_html():
-    return HTMLResponse(content=open("static/custom_swagger.html").read())
