@@ -48,6 +48,7 @@ def authenticate_kerberos(token: str):
 class KerberosMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
         if request.url.path.startswith("/protected"):
+            print(request.headers)
             try:
                 token = get_auth_header(request)
                 principal = authenticate_kerberos(token)

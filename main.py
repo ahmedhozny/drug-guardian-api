@@ -38,7 +38,6 @@ app.include_router(download_route.router, prefix="/download", tags=["download"])
 
 async def kerberos_auth_dependency(request: Request):
     try:
-        print(request.headers)
         token = get_auth_header(request)
         principal = authenticate_kerberos(token)
         request.state.principal = principal
