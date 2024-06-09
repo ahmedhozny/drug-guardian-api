@@ -9,8 +9,8 @@ from fastapi.openapi.docs import get_swagger_ui_html
 from starlette.responses import HTMLResponse
 from starlette.staticfiles import StaticFiles
 
-from authentication.http import get_auth_header, authenticate_kerberos
-from authentication.kerberos import KerberosMiddleware, create_access_token, get_current_user
+from authentication.kerberos import KerberosMiddleware, create_access_token, get_current_user, get_auth_header, \
+    authenticate_kerberos
 from logger import uvicorn_logger, get_uvicorn_logger_config
 from routes import drugs_route, account_route, download_route
 from schemes.token import TokenResponse
