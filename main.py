@@ -4,11 +4,14 @@ from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, Request, Depends
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.openapi.docs import get_swagger_ui_html
+from starlette.responses import HTMLResponse
 
 from authentication.http import get_auth_header, authenticate_kerberos
-from authentication.kerberos import KerberosMiddleware
+from authentication.kerberos import KerberosMiddleware, create_access_token
 from logger import uvicorn_logger, get_uvicorn_logger_config
 from routes import drugs_route, account_route, download_route
+from schemes.token import TokenResponse
 from storage import db_instance
 
 load_dotenv()
@@ -43,7 +46,7 @@ async def kerberos_auth_dependency(request: Request):
         request.state.principal = principal
     except HTTPException as e:
         logging.error(f"Authentication failed: {e.detail}")
-        return JSONResponse(status_code=e.status_code, content={"detail": e.detail}, headers={"WWW-Authenticate": "Negotiate"})
+        raise HTTPException(status_code=e.status_code, headers={"WWW-Authenticate": "Negotiate"}, detail=e.detail)
 
 
 @app.get("/protected", dependencies=[Depends(kerberos_auth_dependency)])
@@ -60,3 +63,47 @@ def health():
 @app.get("/favicon.ico")
 def favicon():
     return FileResponse("favicon.ico")
+
+
+@app.get("/docs1", include_in_schema=False)
+async def custom_swagger_ui_html():
+    html_content = """
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Swagger UI</title>
+        <link href="https://unpkg.com/swagger-ui-dist/swagger-ui.css" rel="stylesheet">
+    </head>
+    <body>
+        <div id="swagger-ui"></div>
+        <script src="https://unpkg.com/swagger-ui-dist/swagger-ui-bundle.js"></script>
+        <script>
+            window.onload = function() {
+                const ui = SwaggerUIBundle({
+                    url: '/openapi.json',
+                    dom_id: '#swagger-ui',
+                    presets: [
+                        SwaggerUIBundle.presets.apis,
+                        SwaggerUIBundle.SwaggerUIStandalonePreset
+                    ],
+                    layout: "BaseLayout",
+                    requestInterceptor: function (req) {
+                        // Modify the following line to dynamically insert the Kerberos token
+                        req.headers['Authorization'] = 'Negotiate ' + btoa('your_token_here');
+                        return req;
+                    }
+                });
+                window.ui = ui;
+            }
+        </script>
+    </body>
+    </html>
+    """
+    return HTMLResponse(content=html_content)
+
+
+@app.post("/token", response_model=TokenResponse)
+async def generate_token(request: Request, kerberos_auth: None = Depends(kerberos_auth_dependency)):
+    principal = request.state.principal
+    access_token = create_access_token(data={"sub": principal})
+    return {"access_token": access_token, "token_type": "bearer"}

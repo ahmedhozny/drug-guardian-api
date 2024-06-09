@@ -1,6 +1,8 @@
 import base64
 
 from gssapi import exceptions
+from datetime import datetime, timedelta
+import jwt
 
 import gssapi
 from fastapi import Request, HTTPException
@@ -50,7 +52,7 @@ class KerberosMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
         if request.url.path.startswith("/protected"):
             print()
-            print(request.headers)
+            print("[{}]".format(request.headers))
             print()
             try:
                 token = get_auth_header(request)
@@ -62,3 +64,17 @@ class KerberosMiddleware(BaseHTTPMiddleware):
                                     headers={"WWW-Authenticate": "Negotiate"})
         response = await call_next(request)
         return response
+
+
+SECRET_KEY = "your_secret_key"
+ALGORITHM = "HS256"
+
+def create_access_token(data: dict, expires_delta: timedelta = None):
+    to_encode = data.copy()
+    if expires_delta:
+        expire = datetime.utcnow() + expires_delta
+    else:
+        expire = datetime.utcnow() + timedelta(minutes=15)
+    to_encode.update({"exp": expire})
+    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+    return encoded_jwt
