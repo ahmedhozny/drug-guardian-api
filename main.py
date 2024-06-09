@@ -86,7 +86,7 @@ async def custom_openapi():
 
 
 @app.post("/token", response_model=TokenResponse)
-async def generate_token(request: Request):
+async def generate_token(request: Request, kerberos_auth: None = Depends(kerberos_auth_dependency)):
     principal = request.state.principal
     access_token = create_access_token(data={"sub": principal})
     return {"access_token": access_token, "token_type": "bearer"}
