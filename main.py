@@ -10,6 +10,7 @@ from fastapi.openapi.utils import get_openapi
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.docs import get_swagger_ui_html
+from fastapi.security import OAuth2PasswordBearer
 from starlette.responses import HTMLResponse
 from starlette.staticfiles import StaticFiles
 
@@ -123,3 +124,10 @@ async def manual_token_entry():
     </html>
     """
     return HTMLResponse(content=html_content)
+
+
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+@app.get("/protected")
+async def protected_route(token: str = Depends(oauth2_scheme)):
+    # Validate token (e.g., using jwt.decode or other validation methods)
+    return {"message": "You have accessed a protected route!", "token": token}
