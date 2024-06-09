@@ -1,7 +1,9 @@
+import base64
 import logging
+from typing import Union, Annotated
 
 from dotenv import load_dotenv
-from fastapi import FastAPI, HTTPException, Request, Depends, Security
+from fastapi import FastAPI, HTTPException, Request, Depends, Response
 from fastapi.openapi.utils import get_openapi
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
@@ -15,6 +17,14 @@ from logger import uvicorn_logger, get_uvicorn_logger_config
 from routes import drugs_route, account_route, download_route
 from schemes.token import TokenResponse
 from storage import db_instance
+
+from fastapi_gssapi import GSSAPIAuth
+
+SECRET_KEY = "ff0d69562f59c8063554d63e190411ac7a78c1322c6cf5e864a6b7b0d9f756b7"
+ALGORITHM = "HS256"
+ACCESS_TOKEN_EXPIRE_MINUTES = 30
+
+gssapi_auth = GSSAPIAuth()
 
 load_dotenv()
 
@@ -68,8 +78,16 @@ def favicon():
     return FileResponse("favicon.ico")
 
 
-@app.post("/token", response_model=TokenResponse, dependencies=[Depends(kerberos_auth_dependency)])
-async def generate_token(request: Request):
-    principal = request.state.principal
-    access_token = create_access_token(data={"sub": principal})
+@app.get("/token", response_model=TokenResponse)
+async def token(
+    response: Response,
+    auth: Annotated[tuple[str, Union[bytes, None]], Depends(gssapi_auth)],
+):
+    if auth[1]:
+        response.headers["WWW-Authenticate"] = base64.b64encode(auth[1]).decode("utf-8")
+
+    access_token = create_access_token(
+        data={"iss": "HTTP/api.drugguardian.net@MEOW", "sub": auth[0]}
+    )
+
     return {"access_token": access_token, "token_type": "bearer"}
