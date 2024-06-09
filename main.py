@@ -53,7 +53,7 @@ async def kerberos_auth_dependency(request: Request):
 
 
 @app.get("/protected", dependencies=[Depends(get_current_user)])
-async def protected_route(request: Request, current_user: str = Security(get_current_user)):
+async def protected_route(request: Request):
     principal = request.state.principal
     return {"message": f"Hello, {principal}"}
 
