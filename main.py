@@ -92,7 +92,7 @@ def favicon():
     return FileResponse("favicon.ico")
 
 
-@app.get("/token", response_model=TokenResponse)
+@app.post("/token", response_model=TokenResponse)
 async def token(
     response: Response,
     auth: Annotated[tuple[str, Union[bytes, None]], Depends(gssapi_auth)],
