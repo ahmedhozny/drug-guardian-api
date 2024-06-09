@@ -6,6 +6,7 @@ from fastapi.responses import FileResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 
 from authentication.http import get_auth_header, authenticate_kerberos
+from authentication.kerberos import KerberosMiddleware
 from logger import uvicorn_logger, get_uvicorn_logger_config
 from routes import drugs_route, account_route, download_route
 from storage import db_instance
@@ -25,6 +26,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.add_middleware(KerberosMiddleware)
 
 db_instance.reload()
 
