@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Custom Swagger UI</title>
+    <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/swagger-ui-dist@3/swagger-ui.css">
+    <script src="https://cdn.jsdelivr.net/npm/swagger-ui-dist@3/swagger-ui-bundle.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/swagger-ui-dist@3/swagger-ui-standalone-preset.js"></script>
+    <script>
+      window.onload = function() {
+        const ui = SwaggerUIBundle({
+          url: "/openapi.json",
+          dom_id: '#swagger-ui',
+          presets: [
+            SwaggerUIBundle.presets.apis,
+            SwaggerUIStandalonePreset
+          ],
+          layout: "StandaloneLayout"
+        });
+        // Add a text input for the Kerberos token
+        const kerberosInput = document.createElement('input');
+        kerberosInput.type = 'text';
+        kerberosInput.placeholder = 'Enter Kerberos Token';
+        kerberosInput.id = 'kerberosToken';
+        document.querySelector('.topbar').appendChild(kerberosInput);
+        // Add a button to set the Authorization header
+        const setTokenButton = document.createElement('button');
+        setTokenButton.innerText = 'Set Kerberos Token';
+        setTokenButton.onclick = () => {
+          const token = document.getElementById('kerberosToken').value;
+          ui.authActions.authorize({
+            kerberosAuth: {
+              name: 'kerberosAuth',
+              schema: {
+                type: 'apiKey',
+                in: 'header',
+                name: 'Authorization'
+              },
+              value: 'Negotiate ' + token
+            }
+          });
+        };
+        document.querySelector('.topbar').appendChild(setTokenButton);
+      };
+    </script>
+</head>
+<body>
+<div id="swagger-ui"></div>
+</body>
+</html>

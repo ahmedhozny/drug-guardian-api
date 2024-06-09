@@ -1,0 +1,38 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "FastAPI Kerberos Auth",
+    "version": "1.0.0"
+  },
+  "host": "api.drugguardian.net",
+  "schemes": ["http"],
+  "paths": {
+    "/protected": {
+      "get": {
+        "summary": "Protected Route",
+        "description": "This route requires Kerberos authentication",
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        }
+      }
+    }
+  },
+  "securityDefinitions": {
+    "kerberosAuth": {
+      "type": "apiKey",
+      "name": "Authorization",
+      "in": "header",
+      "description": "Kerberos token with 'Negotiate' scheme"
+    }
+  },
+  "security": [
+    {
+      "kerberosAuth": []
+    }
+  ]
+}
