@@ -104,3 +104,22 @@ async def token(
     )
 
     return {"access_token": access_token, "token_type": "bearer"}
+
+
+@app.get("/token/manual", response_class=HTMLResponse)
+async def manual_token_entry():
+    html_content = """
+    <html>
+        <head>
+            <title>Manual Token Entry</title>
+        </head>
+        <body>
+            <form action="/token" method="get">
+                <label for="token">Enter Token:</label>
+                <input type="text" id="token" name="token">
+                <input type="submit" value="Submit">
+            </form>
+        </body>
+    </html>
+    """
+    return HTMLResponse(content=html_content)
