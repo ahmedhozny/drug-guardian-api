@@ -92,7 +92,7 @@ def favicon():
     return FileResponse("favicon.ico")
 
 
-@app.post("/token", response_model=TokenResponse)
+@app.get("/token", response_model=TokenResponse)
 async def token(
     response: Response,
     auth: Annotated[tuple[str, Union[bytes, None]], Depends(gssapi_auth)],
@@ -115,7 +115,7 @@ async def manual_token_entry():
             <title>Manual Token Entry</title>
         </head>
         <body>
-            <form action="/protected" method="post">
+            <form action="/protected" method="get">
                 <label for="token">Enter Token:</label>
                 <input type="text" id="token" name="token">
                 <input type="submit" value="Submit">
@@ -128,7 +128,7 @@ async def manual_token_entry():
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
-@app.post("/protected")
+@app.get("/protected")
 async def protected_route(token: str = Depends(oauth2_scheme)):
     # Validate token (e.g., using jwt.decode or other validation methods)
     return {"message": "You have accessed a protected route!", "token": token}
