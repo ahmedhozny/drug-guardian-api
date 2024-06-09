@@ -11,6 +11,7 @@ import logging
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.DEBUG)
 
+
 def get_auth_header(request: Request):
     auth_header = request.headers.get('Authorization')
     logger.debug(f"Authorization header: {auth_header}")
@@ -48,13 +49,16 @@ def authenticate_kerberos(token: str):
 class KerberosMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
         if request.url.path.startswith("/protected"):
+            print()
             print(request.headers)
+            print()
             try:
                 token = get_auth_header(request)
                 principal = authenticate_kerberos(token)
                 request.state.principal = principal
             except HTTPException as e:
                 logging.error(f"Authentication failed: {e.detail}")
-                return JSONResponse(status_code=e.status_code, content={"detail": e.detail}, headers={"WWW-Authenticate": "Negotiate"})
+                return JSONResponse(status_code=e.status_code, content={"detail": e.detail},
+                                    headers={"WWW-Authenticate": "Negotiate"})
         response = await call_next(request)
         return response
