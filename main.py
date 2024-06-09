@@ -2,13 +2,14 @@ import logging
 
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, Request, Depends
+from fastapi.openapi.utils import get_openapi
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.docs import get_swagger_ui_html
 from starlette.responses import HTMLResponse
 
 from authentication.http import get_auth_header, authenticate_kerberos
-from authentication.kerberos import KerberosMiddleware, create_access_token
+from authentication.kerberos import KerberosMiddleware, create_access_token, get_current_user
 from logger import uvicorn_logger, get_uvicorn_logger_config
 from routes import drugs_route, account_route, download_route
 from schemes.token import TokenResponse
@@ -49,7 +50,7 @@ async def kerberos_auth_dependency(request: Request):
         raise HTTPException(status_code=e.status_code, headers={"WWW-Authenticate": "Negotiate"}, detail=e.detail)
 
 
-@app.get("/protected", dependencies=[Depends(kerberos_auth_dependency)])
+@app.get("/protected", dependencies=[Depends(get_current_user)])
 async def protected_route(request: Request):
     principal = request.state.principal
     return {"message": f"Hello, {principal}"}
@@ -67,43 +68,25 @@ def favicon():
 
 @app.get("/docs1", include_in_schema=False)
 async def custom_swagger_ui_html():
-    html_content = """
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <title>Swagger UI</title>
-        <link href="https://unpkg.com/swagger-ui-dist/swagger-ui.css" rel="stylesheet">
-    </head>
-    <body>
-        <div id="swagger-ui"></div>
-        <script src="https://unpkg.com/swagger-ui-dist/swagger-ui-bundle.js"></script>
-        <script>
-            window.onload = function() {
-                const ui = SwaggerUIBundle({
-                    url: '/openapi.json',
-                    dom_id: '#swagger-ui',
-                    presets: [
-                        SwaggerUIBundle.presets.apis,
-                        SwaggerUIBundle.SwaggerUIStandalonePreset
-                    ],
-                    layout: "BaseLayout",
-                    requestInterceptor: function (req) {
-                        // Modify the following line to dynamically insert the Kerberos token
-                        req.headers['Authorization'] = 'Negotiate ' + btoa('your_token_here');
-                        return req;
-                    }
-                });
-                window.ui = ui;
-            }
-        </script>
-    </body>
-    </html>
-    """
-    return HTMLResponse(content=html_content)
+    return get_swagger_ui_html(
+        openapi_url="/openapi.json",
+        title="Custom Swagger UI",
+        swagger_js_url="https://cdn.jsdelivr.net/npm/swagger-ui-dist@3/swagger-ui-bundle.js",
+        swagger_css_url="https://cdn.jsdelivr.net/npm/swagger-ui-dist@3/swagger-ui.css",
+    )
+
+@app.get("/openapi.json", include_in_schema=False)
+async def custom_openapi():
+    return get_openapi(
+        title="FastAPI Kerberos Auth",
+        version="1.0.0",
+        description="API with Kerberos authentication",
+        routes=app.routes,
+    )
 
 
 @app.post("/token", response_model=TokenResponse)
-async def generate_token(request: Request, kerberos_auth: None = Depends(kerberos_auth_dependency)):
+async def generate_token(request: Request):
     principal = request.state.principal
     access_token = create_access_token(data={"sub": principal})
     return {"access_token": access_token, "token_type": "bearer"}
