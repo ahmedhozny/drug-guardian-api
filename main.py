@@ -115,7 +115,7 @@ async def manual_token_entry():
             <title>Manual Token Entry</title>
         </head>
         <body>
-            <form action="/token" method="get">
+            <form action="/protected" method="post">
                 <label for="token">Enter Token:</label>
                 <input type="text" id="token" name="token">
                 <input type="submit" value="Submit">
@@ -127,7 +127,8 @@ async def manual_token_entry():
 
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
-@app.get("/protected")
+
+@app.post("/protected")
 async def protected_route(token: str = Depends(oauth2_scheme)):
     # Validate token (e.g., using jwt.decode or other validation methods)
     return {"message": "You have accessed a protected route!", "token": token}
