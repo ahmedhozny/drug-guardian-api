@@ -18,7 +18,8 @@ class GSSAPIAuth:
     def __call__(
         self, authorization: Annotated[Union[str, None], Header()] = None
     ) -> tuple[str, Union[bytes, None]]:
-        print(authorization)
+        print("Hi")
+        print(Header())
         if not authorization:
             raise HTTPException(
                 status_code=401, headers={"WWW-Authenticate": "Negotiate"}
