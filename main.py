@@ -99,7 +99,9 @@ async def token(
     response: Response,
     auth: Annotated[tuple[str, Union[bytes, None]], Depends(gssapi_auth)],
 ):
+    print("/token")
     print(auth)
+    print("/token")
     if auth[1]:
         response.headers["WWW-Authenticate"] = base64.b64encode(auth[1]).decode("utf-8")
 
