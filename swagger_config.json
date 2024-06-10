@@ -7,7 +7,7 @@
   "host": "api.drugguardian.net",
   "schemes": ["http"],
   "paths": {
-    "/protected": {
+    "/token": {
       "get": {
         "summary": "Protected Route",
         "description": "This route requires Kerberos authentication",
