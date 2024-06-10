@@ -10,10 +10,12 @@ from fastapi.openapi.utils import get_openapi
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.docs import get_swagger_ui_html
-from fastapi.security import OAuth2PasswordBearer
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from starlette.responses import HTMLResponse
 from starlette.staticfiles import StaticFiles
 
+from authentication.auth_bearer import JWTBearer
+from authentication.auth_handler import signJWT
 # from authentication.kerberos import KerberosMiddleware, create_access_token, get_current_user, get_auth_header, \
 #     authenticate_kerberos
 from logger import uvicorn_logger, get_uvicorn_logger_config
@@ -104,7 +106,9 @@ async def token(
         data={"iss": "HTTP/api.drugguardian.net@MEOW", "sub": auth[0]}
     )
 
-    return {"access_token": access_token, "token_type": "bearer"}
+    access_token = signJWT(auth[0])
+
+    return {"access_token": access_token.get("access_token"), "token_type": "bearer"}
 
 
 @app.get("/token/manual", response_class=HTMLResponse)
@@ -126,7 +130,7 @@ async def manual_token_entry():
     return HTMLResponse(content=html_content)
 
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+oauth2_scheme = JWTBearer()
 
 @app.get("/protected")
 async def protected_route(token: str = Depends(oauth2_scheme)):
