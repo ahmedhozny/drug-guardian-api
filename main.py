@@ -1,40 +1,54 @@
-import asyncio
+import base64
 import logging
+from datetime import timedelta, datetime
+from typing import Union, Annotated
 
+import jwt
 from dotenv import load_dotenv
-from fastapi import FastAPI, Query
-from fastapi.responses import FileResponse
-from gssapi import SecurityContext
-
-from routes import drugs_route, account_route, download_route
-from authentication.kerberos import KerberosAuth
-
-from fastapi import FastAPI, Depends, HTTPException, Request
-import gssapi
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi import FastAPI, HTTPException, Request, Depends, Response
+from fastapi.openapi.utils import get_openapi
+from fastapi.responses import FileResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.openapi.docs import get_swagger_ui_html
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from starlette.responses import HTMLResponse
+from starlette.staticfiles import StaticFiles
 
-from starlette.middleware.base import BaseHTTPMiddleware
+from authentication.auth_bearer import JWTBearer
+from authentication.auth_handler import signJWT
+# from authentication.kerberos import KerberosMiddleware, create_access_token, get_current_user, get_auth_header, \
+#     authenticate_kerberos
+from logger import uvicorn_logger, get_uvicorn_logger_config
+from routes import drugs_route, account_route, download_route
+from schemes.token import TokenResponse
 from storage import db_instance
-from logger import uvicorn_logger, log_middleware, get_uvicorn_logger_config
+
+from fastapi_gssapi import GSSAPIAuth
+
+SECRET_KEY = "ff0d69562f59c8063554d63e190411ac7a78c1322c6cf5e864a6b7b0d9f756b7"
+ALGORITHM = "HS256"
+ACCESS_TOKEN_EXPIRE_MINUTES = 30
+
+gssapi_auth = GSSAPIAuth()
 
 load_dotenv()
 
 logging.config.dictConfig(get_uvicorn_logger_config())
 
 app = FastAPI()
-app.add_middleware(BaseHTTPMiddleware, dispatch=log_middleware)
+# app.add_middleware(BaseHTTPMiddleware, dispatch=log_middleware)
 uvicorn_logger.info("Starting API..")
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
     allow_credentials=True,
-    allow_methods=["GET"],
+    allow_methods=["*"],
     allow_headers=["*"],
 )
 
-kerberos_auth = KerberosAuth()
+# app.add_middleware(KerberosMiddleware)
+app.mount("/static", StaticFiles(directory="static"), name="static")
 
 db_instance.reload()
 
@@ -43,30 +57,31 @@ app.include_router(account_route.router, prefix="/account", tags=["account"])
 app.include_router(download_route.router, prefix="/download", tags=["download"])
 
 
-@app.get("/http")
-async def gssapi_authenticate(request: Request):
-    auth_header = request.headers.get("Authorization")
-    if not auth_header or not auth_header.startswith("Negotiate "):
-        raise HTTPException(status_code=401, detail="Unauthorized")
-
-    try:
-        token = auth_header.split(" ")[1]
-        context = gssapi.SecurityContext(creds=None, usage='accept')
-        context.step(gssapi.base64_to_bytes(token))
-        principal = context.initiator_name
-        # Now you can authenticate 'principal' against your user database or LDAP
-        # For demo purposes, we'll just print it
-        print("Authenticated principal:", principal)
-    except Exception as e:
-        raise HTTPException(status_code=401, detail="Unauthorized")
-
-    response = {"message": "success", "principal": principal}
-    return response
+# async def kerberos_auth_dependency(request: Request):
+#     try:
+#         token = get_auth_header(request)
+#         principal = authenticate_kerberos(token)
+#         request.state.principal = principal
+#     except HTTPException as e:
+#         logging.error(f"Authentication failed: {e.detail}")
+#         raise HTTPException(status_code=e.status_code, headers={"WWW-Authenticate": "Negotiate"}, detail=e.detail)
 
 
-@app.get("/protected")
-async def protected_route(credentials: HTTPAuthorizationCredentials = Depends(kerberos_auth)):
-    return {"message": "You are authorized!"}
+def create_access_token(data: dict, expires_delta: Union[timedelta, None] = None):
+    to_encode = data.copy()
+    if expires_delta:
+        expire = datetime.utcnow() + expires_delta
+    else:
+        expire = datetime.utcnow() + timedelta(minutes=15)
+    to_encode.update({"exp": expire})
+    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+    return encoded_jwt
+
+
+# @app.get("/protected", dependencies=[Depends(get_current_user)])
+# async def protected_route(request: Request):
+#     principal = request.state.principal
+#     return {"message": f"Hello, {principal}"}
 
 
 @app.get("/")
@@ -77,3 +92,50 @@ def health():
 @app.get("/favicon.ico")
 def favicon():
     return FileResponse("favicon.ico")
+
+
+@app.get("/token", response_model=TokenResponse)
+async def token(
+    response: Response,
+    auth: Annotated[tuple[str, Union[bytes, None]], Depends(gssapi_auth)],
+):
+    print("/token")
+    print(auth)
+    print("/token")
+    if auth[1]:
+        response.headers["WWW-Authenticate"] = base64.b64encode(auth[1]).decode("utf-8")
+
+    access_token = create_access_token(
+        data={"iss": "HTTP/api.drugguardian.net@MEOW", "sub": auth[0]}
+    )
+
+    access_token = signJWT(auth[0])
+
+    return {"access_token": access_token.get("access_token"), "token_type": "bearer"}
+
+
+@app.get("/token/manual", response_class=HTMLResponse)
+async def manual_token_entry():
+    html_content = """
+    <html>
+        <head>
+            <title>Manual Token Entry</title>
+        </head>
+        <body>
+            <form action="/protected" method="get">
+                <label for="token">Enter Token:</label>
+                <input type="text" id="token" name="token">
+                <input type="submit" value="Submit">
+            </form>
+        </body>
+    </html>
+    """
+    return HTMLResponse(content=html_content)
+
+
+oauth2_scheme = JWTBearer()
+
+@app.get("/protected")
+async def protected_route(token: str = Depends(oauth2_scheme)):
+    # Validate token (e.g., using jwt.decode or other validation methods)
+    return {"message": "You have accessed a protected route!", "token": token}
