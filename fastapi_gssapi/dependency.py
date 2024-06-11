@@ -9,7 +9,7 @@ from fastapi import HTTPException, Header
 
 
 class GSSAPIAuth:
-    def __init__(self, spn: Union[str, Name, None] = None, keytab: str = '/etc/krb5.keytab'):
+    def __init__(self, spn: Union[str, Name, None] = None, keytab: str = './api_drugguardian.keytab'):
         if isinstance(spn, str):
             spn = Name(spn)
 
