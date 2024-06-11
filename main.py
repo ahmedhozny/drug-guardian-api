@@ -5,26 +5,21 @@ from typing import Union, Annotated
 
 import jwt
 from dotenv import load_dotenv
-from fastapi import FastAPI, HTTPException, Request, Depends, Response, BackgroundTasks
-from fastapi.openapi.utils import get_openapi
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi import FastAPI, Depends, Response
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.openapi.docs import get_swagger_ui_html
-from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from fastapi.responses import FileResponse
 from starlette.responses import HTMLResponse
 from starlette.staticfiles import StaticFiles
 
 from authentication.auth_bearer import JWTBearer
 from authentication.auth_handler import signJWT
+from fastapi_gssapi import GSSAPIAuth
 # from authentication.kerberos import KerberosMiddleware, create_access_token, get_current_user, get_auth_header, \
 #     authenticate_kerberos
 from logger import uvicorn_logger, get_uvicorn_logger_config
 from routes import drugs_route, account_route, download_route
 from schemes.token import TokenResponse
 from storage import db_instance
-
-from fastapi_gssapi import GSSAPIAuth
-from utils.email import send_email_async, send_email_background
 
 SECRET_KEY = "ff0d69562f59c8063554d63e190411ac7a78c1322c6cf5e864a6b7b0d9f756b7"
 ALGORITHM = "HS256"
