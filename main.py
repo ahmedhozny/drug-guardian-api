@@ -5,7 +5,7 @@ from typing import Union, Annotated
 
 import jwt
 from dotenv import load_dotenv
-from fastapi import FastAPI, HTTPException, Request, Depends, Response
+from fastapi import FastAPI, HTTPException, Request, Depends, Response, BackgroundTasks
 from fastapi.openapi.utils import get_openapi
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
@@ -24,12 +24,13 @@ from schemes.token import TokenResponse
 from storage import db_instance
 
 from fastapi_gssapi import GSSAPIAuth
+from utils.email import send_email_async, send_email_background
 
 SECRET_KEY = "ff0d69562f59c8063554d63e190411ac7a78c1322c6cf5e864a6b7b0d9f756b7"
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
-gssapi_auth = GSSAPIAuth()
+gssapi_auth = GSSAPIAuth("HTTP@api.drugguardian.net")
 
 load_dotenv()
 
@@ -55,6 +56,7 @@ db_instance.reload()
 app.include_router(drugs_route.router, prefix="/drugs", tags=["drugs"])
 app.include_router(account_route.router, prefix="/account", tags=["account"])
 app.include_router(download_route.router, prefix="/download", tags=["download"])
+app.include_router(account_route.router, prefix="/account", tags=["account"])
 
 
 # async def kerberos_auth_dependency(request: Request):
@@ -96,8 +98,8 @@ def favicon():
 
 @app.get("/token", response_model=TokenResponse)
 async def token(
-    response: Response,
-    auth: Annotated[tuple[str, Union[bytes, None]], Depends(gssapi_auth)],
+        response: Response,
+        auth: Annotated[tuple[str, Union[bytes, None]], Depends(gssapi_auth)],
 ):
     print("/token")
     print(auth)
@@ -134,6 +136,7 @@ async def manual_token_entry():
 
 
 oauth2_scheme = JWTBearer()
+
 
 @app.get("/protected")
 async def protected_route(token: str = Depends(oauth2_scheme)):
