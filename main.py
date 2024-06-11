@@ -25,7 +25,7 @@ SECRET_KEY = "ff0d69562f59c8063554d63e190411ac7a78c1322c6cf5e864a6b7b0d9f756b7"
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
-gssapi_auth = GSSAPIAuth("HTTP@api.drugguardian.net")
+gssapi_auth = GSSAPIAuth("HTTP/api.drugguardian.net@MEOW")
 
 load_dotenv()
 
