@@ -1,17 +1,25 @@
-from typing import List
+from typing import List, Annotated, Union
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Header
+from fastapi.security import OAuth2PasswordRequestForm
 from starlette import status
 from starlette.responses import RedirectResponse
 
+from authentication.auth_bearer import AuthBearer
+from authentication.auth_kerberos import AuthKerberos
+from authentication.authentication import Authentication
 from models import HospitalModel, BaseModel, EmailAddresses, PharmaceuticalModel, \
     ResearcherModel
+from schemas import TokenBase
 from services.client import hospital_signup_request, hospital_signup_request_handle, verification_handling, \
-    signup_handling
+    signup_handling, login_handling
 from storage import Storage
 
 router = APIRouter()
 
+auth_bearer = AuthBearer()
+kerberos_auth = AuthKerberos()
+combined_auth = Authentication()
 
 @router.post("/healthcare", status_code=status.HTTP_201_CREATED)
 async def create_healthcare(hosp=Depends(hospital_signup_request)):
@@ -66,9 +74,19 @@ async def post_registration(res=Depends(signup_handling)):
 
 
 
-@router.post("/login", status_code=status.HTTP_201_CREATED)
-async def login():
-    pass
+@router.post("/login", response_model=TokenBase)
+async def login(
+        form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
+        authorization: Annotated[Union[str, None], Header()] = None
+):
+    if combined_auth.is_authenticated_with_kerberos(authorization):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Already authenticated with Kerberos"
+        )
+
+    res = await login_handling(auth_bearer, username=form_data.username, password=form_data.password)
+    return {"access_token": res.access_token, "token_type": res.token_type}
 
 
 @router.get("/accounts/")
@@ -108,3 +126,8 @@ async def get_accounts(org: str):
                 "country": client.address_relationships.country
             })
     return clients_list
+
+
+@router.get("/protected-route")
+async def protected_route(auth: dict = Depends(combined_auth)):
+    return {"message": "You are authorized"}

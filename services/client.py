@@ -1,11 +1,14 @@
 import asyncio
+import base64
 import datetime
 import random
 import string
 import uuid
 from typing import List
 
+import gssapi
 import jwt
+import requests
 from fastapi import HTTPException
 from pydantic.v1 import EmailStr, EmailError
 
@@ -153,6 +156,29 @@ async def signup_handling(handle_scheme: schemas.AccountRegister):
         password_hashed=AuthBearer.get_password_hash(handle_scheme.password)
     ))
 
+    SPNEGO = gssapi.Mechanism.from_sasl_name("SPNEGO")
+
+    target = gssapi.Name("HTTP@kerberos.drugguardian.net",
+                         gssapi.NameType.hostbased_service)
+
+    ctx = gssapi.SecurityContext(name=target,
+                                 mech=SPNEGO,
+                                 usage="initiate")
+
+    in_token = None
+    out_token = ctx.step(in_token)
+
+    token = base64.b64encode(out_token).decode('utf-8')
+
+    headers = {
+        'Authorization': f'Negotiate {token}'
+    }
+
+    # Make the HTTP request
+    url = "http://kerberos.drugguardian.net/add_principal"
+    response = requests.get(url, headers=headers)
+    if response.status_code != 200:
+        raise HTTPException(500, "Failed to create kerberos principal. Please contact server owner.")
     return {"keytab_password": keytab_password}
 
 
