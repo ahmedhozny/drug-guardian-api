@@ -19,10 +19,9 @@ class AuthBearer:
     __pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
     __secret = 'SECRET'
     __algorithm = 'HS256'
-    oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
+    oauth2_scheme = OAuth2PasswordBearer(tokenUrl="account/login")
 
     async def __call__(self, token: str = Depends(oauth2_scheme)):
-        print("token:: " + token)
         if not self.verify_token(token):
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,

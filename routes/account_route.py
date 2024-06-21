@@ -73,7 +73,6 @@ async def post_registration(res=Depends(signup_handling)):
     return {"keytab": res["keytab_password"]}
 
 
-
 @router.post("/login", response_model=TokenBase)
 async def login(
         form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
