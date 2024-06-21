@@ -130,3 +130,8 @@ async def get_accounts(org: str):
 @router.get("/protected-route")
 async def protected_route(auth: dict = Depends(combined_auth)):
     return {"message": "You are authorized"}
+
+
+@router.get("/protected_kerberos")
+async def protected_kerberos(auth: Annotated[tuple[str, Union[bytes, None]], Depends(kerberos_auth)]):
+    return {"message": "You are authorized"}
