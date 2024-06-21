@@ -2,9 +2,8 @@ from os import getenv
 from typing import Any, Type, Dict, List, TypeVar
 
 from dotenv import load_dotenv
-
-from sqlalchemy import create_engine, and_, or_, Column, select
-from sqlalchemy.orm import sessionmaker, scoped_session, joinedload
+from sqlalchemy import create_engine, and_, or_, Column
+from sqlalchemy.orm import sessionmaker, scoped_session
 
 from models.base_model import BaseModel
 
@@ -49,13 +48,12 @@ class DBStorage:
         if commit:
             self.__session.commit()
 
-    async def all(self, cls: Type[T]):
-        dic = {}
+    async def all(self, cls: Type[T]) -> List[T]:
+        all = []
         query = self.__session.query(cls)
         for element in query:
-            key = "{}.{}".format(type(element).__name__, element.id)
-            dic[key] = element
-        return dic
+            all.append(element)
+        return all
 
     async def search_for(self, model: Type[T], filters: Dict[Column, Any], operator='or') -> List[T]:
         """
@@ -99,33 +97,6 @@ class DBStorage:
             query = self.__session.query(model).filter(or_(*conditions))
 
         return query.count()
-
-    async def filter(self, cls: Type[T], **kwargs):
-        """Filters objects based on the provided class and column-value pairs.
-
-        Args:
-            cls (T): The class object to filter.
-            **kwargs: Keyword arguments representing column names and their values
-                    to filter by.
-
-        Returns:
-            list: A list of filtered objects, or None if an error occurs.
-        """
-
-        query = self.__session.query(cls)
-
-        # Build the filter expression dynamically based on provided arguments
-        filters = []
-        for column, value in kwargs.items():
-            # Ensure the column exists in the class model
-            if not hasattr(cls, column):
-                raise ValueError(f"Column '{column}' does not exist in class '{cls.__name__}'")
-            filters.append(getattr(cls, column) == value)
-
-        # Apply all filters to the query
-        query = query.filter(*filters)
-
-        return query.all()
 
     async def get_by_attr(self, cls: Type[T], key: str, attr: Any):
         result = self.__session.query(cls).filter_by(**{key: attr}).first()

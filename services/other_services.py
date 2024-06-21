@@ -9,7 +9,7 @@ from models.addresses import AddressModel
 from storage import Storage
 
 
-def addLocation(location: schemas.Address, table: Type[BaseModel]):
+def addLocation(location: schemas.Address):
     if location is None:
         return None
 

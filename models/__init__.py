@@ -2,7 +2,6 @@ from models.base_model import BaseModel
 from models.uuid_registry import UuidRegistry
 from models.drug import DrugsModel
 from models.ddi import DDIModel
-from models.organisations import OrganisationsModel
 from models.addresses import AddressModel
 from models.hospital import HospitalModel
 from models.pharmaceutical import PharmaceuticalModel

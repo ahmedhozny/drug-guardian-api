@@ -4,10 +4,8 @@ from fastapi import APIRouter, Depends, HTTPException
 from starlette import status
 from starlette.responses import RedirectResponse
 
-import models
-import schemas
-from authentication.auth_bearer import AuthBearer
-from models import HospitalModel, BaseModel, EmailAddresses
+from models import HospitalModel, BaseModel, EmailAddresses, PharmaceuticalModel, \
+    ResearcherModel
 from services.client import hospital_signup_request, hospital_signup_request_handle, verification_handling, \
     signup_handling
 from storage import Storage
@@ -23,8 +21,10 @@ async def create_healthcare(hosp=Depends(hospital_signup_request)):
 @router.get("/pending")
 async def get_pending(org: str):
     objs: List[BaseModel]
-    if org == "hosp":
+    if org == "hospital":
         objs: List[HospitalModel] = await Storage.find(HospitalModel, {HospitalModel.status: "Unconfirmed"})
+    elif org == "pharmaceutical":
+        objs: List[PharmaceuticalModel] = await Storage.find(PharmaceuticalModel, {PharmaceuticalModel.status: "Unconfirmed"})
     else:
         raise HTTPException(400, "Bad Request")
 
@@ -72,6 +72,39 @@ async def login():
 
 
 @router.get("/accounts/")
-async def get_accounts():
-    clients = Storage.get_db_instance().filter(models.AccountDetails).all()
-    return clients
+async def get_accounts(org: str):
+    org_class = {
+        "hospital": HospitalModel,
+        "pharmaceutical": PharmaceuticalModel,
+        "researcher": ResearcherModel,
+    }.get(org)
+
+    if org_class is None:
+        raise HTTPException(status_code=400)
+
+    clients: List[org_class] = await Storage.list(org_class)
+    clients_list = list()
+
+    if org_class == HospitalModel or org_class == PharmaceuticalModel:
+        for client in clients:
+            emails: List[EmailAddresses] = await Storage.find(EmailAddresses, {EmailAddresses.organization_uuid: client.uuid_registry})
+            email = emails[0].email
+            clients_list.append({
+                "name": client.name,
+                "email": email,
+                "phone": client.phone,
+                "status": client.status,
+                "registered_at": client.registered_at,
+                "country": client.address_relationships.country
+            })
+    elif org_class == ResearcherModel:
+        for client in clients:
+            emails: List[EmailAddresses] = await Storage.find(EmailAddresses, {EmailAddresses.organization_uuid: client.uuid_registry})
+            email = emails[0].email
+            clients_list.append({
+                "name": client.first_name + client.last_name,
+                "email": email,
+                "registered_at": client.registered_on,
+                "country": client.address_relationships.country
+            })
+    return clients_list

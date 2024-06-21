@@ -48,6 +48,7 @@ def generate_password(length=12, include_uppercase=True, include_lowercase=True,
 
     return password
 
+
 def hospital_signup_request(request_scheme: HealthcareSignupRequest):
     hospital_model = request_scheme.model_dump()
     if hospital_model.get("organization_name").strip() == "":
@@ -153,6 +154,7 @@ async def signup_handling(handle_scheme: schemas.AccountRegister):
     ))
 
     return {"keytab_password": keytab_password}
+
 
 async def login_handling(auth: AuthBearer, username, password) -> schemas.TokenBase:
     exception = HTTPException(401, "Incorrect username or password", {"WWW-Authenticate": "Bearer"})

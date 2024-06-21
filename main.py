@@ -1,49 +1,35 @@
-import base64
 import logging
-from datetime import timedelta, datetime
-from typing import Union, Annotated, Tuple
+from typing import Union, Annotated
 
-import jwt
 from dotenv import load_dotenv
-from fastapi import FastAPI, HTTPException, Request, Depends, Response, Header
-from fastapi.openapi.utils import get_openapi
-from fastapi.responses import FileResponse, JSONResponse
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.openapi.docs import get_swagger_ui_html
-from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer, OAuth2PasswordRequestForm
-from pydantic import EmailStr
+from fastapi import FastAPI, HTTPException, Depends, Header
 from fastapi import status
-from starlette.responses import HTMLResponse
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
+from fastapi.security import OAuth2PasswordRequestForm
 from starlette.staticfiles import StaticFiles
 
-import schemas
-from authentication.auth_handler import signJWT
+from authentication.auth_bearer import AuthBearer
+from authentication.auth_kerberos import AuthKerberos
 from authentication.authentication import Authentication
 # from authentication.kerberos import KerberosMiddleware, create_access_token, get_current_user, get_auth_header, \
 #     authenticate_kerberos
 from logger import uvicorn_logger, get_uvicorn_logger_config
 from routes import drugs_route, account_route, download_route
 from schemas import TokenBase
-from authentication.auth_bearer import AuthBearer
-from authentication.auth_kerberos import AuthKerberos
-
 from services.client import login_handling
 from storage import Storage
-
-SECRET_KEY = "ff0d69562f59c8063554d63e190411ac7a78c1322c6cf5e864a6b7b0d9f756b7"
-ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 30
-
-kerberos_auth = AuthKerberos()
 
 load_dotenv()
 
 logging.config.dictConfig(get_uvicorn_logger_config())
 
 app = FastAPI()
+
 auth_bearer = AuthBearer()
+kerberos_auth = AuthKerberos()
 combined_auth = Authentication()
-# app.add_middleware(BaseHTTPMiddleware, dispatch=log_middleware)
+
 uvicorn_logger.info("Starting API..")
 
 app.add_middleware(
@@ -62,18 +48,6 @@ Storage.get_db_instance().reload()
 app.include_router(drugs_route.router, prefix="/drugs", tags=["drugs"])
 app.include_router(account_route.router, prefix="/account", tags=["account"])
 app.include_router(download_route.router, prefix="/download", tags=["download"])
-
-
-def create_access_token(data: dict, expires_delta: Union[timedelta, None] = None):
-    to_encode = data.copy()
-    if expires_delta:
-        expire = datetime.utcnow() + expires_delta
-    else:
-        expire = datetime.utcnow() + timedelta(minutes=15)
-    to_encode.update({"exp": expire})
-    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
-    return encoded_jwt
-
 
 # @app.get("/protected", dependencies=[Depends(get_current_user)])
 # async def protected_route(request: Request):
@@ -123,6 +97,7 @@ async def login(
 
     res = await login_handling(auth_bearer, username=form_data.username, password=form_data.password)
     return {"access_token": res.access_token, "token_type": res.token_type}
+
 
 @app.get("/protected-route")
 async def protected_route(auth: dict = Depends(combined_auth)):
