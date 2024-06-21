@@ -13,3 +13,9 @@ logtail-python
 requests~=2.31.0
 redis~=5.0.4
 phonenumbers~=8.13.38
+
+starlette==0.37.2
+PyJWT==2.8.0
+envs==1.4
+krb5==0.5.1
+passlib==1.7.4

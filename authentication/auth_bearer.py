@@ -1,18 +1,17 @@
+from datetime import datetime, timedelta
 from typing import List
 
 import jwt
 from fastapi import HTTPException, Depends
-from fastapi.security import HTTPBearer, OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from fastapi import status
+from fastapi.security import HTTPBearer, OAuth2PasswordBearer
 from jwt import ExpiredSignatureError
 from passlib.context import CryptContext
-from datetime import datetime, timedelta
-
 from sqlalchemy.orm import Session
-from fastapi import status
 
 import schemas
 from models import AccountDetails, AccountBearer, AccountSecurity, EmailAddresses
-from storage import get_storage, StorageSession, Storage
+from storage import get_storage, Storage
 
 
 class AuthBearer:

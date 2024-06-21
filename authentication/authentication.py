@@ -1,12 +1,8 @@
-from typing import Union, Tuple, Annotated
+from typing import Union, Annotated
 
 from fastapi import HTTPException, Header, Depends
-from fastapi.requests import Request
 from fastapi import status
-
 from gssapi.names import Name
-from gssapi.sec_contexts import SecurityContext
-from passlib.context import CryptContext
 
 from authentication.auth_bearer import AuthBearer
 from authentication.auth_kerberos import AuthKerberos
