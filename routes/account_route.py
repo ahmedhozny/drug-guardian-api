@@ -18,8 +18,8 @@ from storage import Storage
 router = APIRouter()
 
 auth_bearer = AuthBearer()
-kerberos_auth = AuthKerberos()
-combined_auth = Authentication()
+kerberos_auth = AuthKerberos("HTTP/api.drugguardian.net@MEOW")
+combined_auth = Authentication("HTTP/api.drugguardian.net@MEOW")
 
 @router.post("/healthcare", status_code=status.HTTP_201_CREATED)
 async def create_healthcare(hosp=Depends(hospital_signup_request)):

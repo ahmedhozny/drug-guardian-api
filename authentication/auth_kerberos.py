@@ -9,11 +9,12 @@ from fastapi import HTTPException, Header
 
 
 class AuthKerberos:
-    def __init__(self, spn: Union[str, Name, None] = None):
+    def __init__(self, spn: Union[str, Name, None] = None, keytab: str = './api_drugguardian.keytab'):
         if isinstance(spn, str):
             spn = Name(spn)
 
-        self.creds = Credentials(usage="accept", name=spn)
+        store = {'keytab': keytab}
+        self.creds = Credentials(usage="accept", name=spn, store=store)
 
     def __call__(
         self, authorization: Annotated[Union[str, None], Header()] = None
