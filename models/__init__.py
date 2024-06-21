@@ -3,5 +3,13 @@ from models.uuid_registry import UuidRegistry
 from models.drug import DrugsModel
 from models.ddi import DDIModel
 from models.organisations import OrganisationsModel
-from models.account_details import AccountDataModel
-from models.account_permissions import AccountPermissionModel
+from models.addresses import AddressModel
+from models.hospital import HospitalModel
+from models.pharmaceutical import PharmaceuticalModel
+from models.researcher_details import ResearcherModel
+from models.account_types import AccountTypes
+from models.account_details import AccountDetails
+from models.account_security import AccountSecurity
+from models.account_verification import AccountVerification
+from models.email_addresses import EmailAddresses
+from models.account_bearer import AccountBearer

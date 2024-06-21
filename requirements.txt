@@ -12,3 +12,4 @@ pyspnego
 logtail-python
 requests~=2.31.0
 redis~=5.0.4
+phonenumbers~=8.13.38

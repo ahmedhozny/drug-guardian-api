@@ -1,11 +1,7 @@
-import uuid
-from sqlalchemy import Column, String, Text, Integer, Float, ForeignKey, BINARY
-
-from models import BaseModel
-from models.uuid_registry import UuidRegistry
+from sqlalchemy import Column, String, Integer, Float, BINARY
 
 
-class OrganisationsModel(BaseModel):
+class OrganisationsModel():
 	__tablename__ = 'organisations'
 
 	_id = Column(Integer, name="id", primary_key=True, autoincrement=True)
@@ -14,5 +10,4 @@ class OrganisationsModel(BaseModel):
 	full_address = Column(String(255), nullable=True)
 	registered_at = Column(Float, nullable=False)
 	active = Column(Integer, nullable=False)
-	uuid = Column(BINARY(16), ForeignKey(UuidRegistry.uuid), nullable=False, default=uuid.uuid4)
-
+	uuid_registry = Column(BINARY(16), nullable=False)

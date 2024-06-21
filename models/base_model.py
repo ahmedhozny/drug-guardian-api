@@ -1,4 +1,8 @@
-from sqlalchemy import Column, Integer
+import base64
+import uuid
+from datetime import datetime
+
+from sqlalchemy import Column, Integer, inspect, BINARY, DateTime
 from sqlalchemy.ext.declarative import declarative_base
 
 Base = declarative_base()
@@ -19,4 +23,10 @@ class BaseModel(Base):
         self._id = value
 
     def to_dict(self):
-        return {k: v for k, v in self.__dict__.items() if k != '_sa_instance_state'}
+        dict_obj = {k: v for k, v in self.__dict__.items() if k != '_sa_instance_state'}
+        for key, val in dict_obj.items():
+            if isinstance(val, bytes):
+                dict_obj[key] = base64.b64encode(val).decode('utf-8')
+            elif isinstance(val, datetime):
+                dict_obj[key] = val.isoformat()
+        return dict_obj

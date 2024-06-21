@@ -1,21 +1,15 @@
 import storage
 from models import DrugsModel
-from storage import Storage, db_instance as db
-from sqlalchemy import or_
+from storage import Storage
 
 
 async def search_for_drug(search: str):
-    drugs = db.get_session().query(DrugsModel).filter(
-        or_(
-            DrugsModel.drug_name.ilike(f"%{search}%"),
-            DrugsModel.brand_name.ilike(f"%{search}%")
-        )
-    ).all()
+    drugs = await Storage.find(DrugsModel, {DrugsModel.drug_name: search, DrugsModel.brand_name: search})
     return drugs
 
 
 async def get_drug_by_id(id: int):
-    res = await db.get_by_id(DrugsModel, id)
+    res = await Storage.get_db_instance().get_by_id(DrugsModel, id)
     return res
 
 

@@ -138,9 +138,9 @@ session.commit()
 
 # Sample drug-drug interactions data
 interactions_data = [
-    {"drug_id_1": 1, "drug_id_2": 2, "interaction": 1},
-    {"drug_id_1": 1, "drug_id_2": 3, "interaction": 0},
-    {"drug_id_1": 2, "drug_id_2": 4, "interaction": 1}
+    {"drug_ref_1": "A123456", "drug_ref_2": "B234567", "interaction": 1},
+    {"drug_ref_1": "A123456", "drug_ref_2": "C345678", "interaction": 0},
+    {"drug_ref_1": "B234567", "drug_ref_2": "D456789", "interaction": 1}
 ]
 
 # Insert sample drug-drug interactions into the database

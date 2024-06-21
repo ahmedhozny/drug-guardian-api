@@ -1,10 +1,10 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import HTTPException, Depends, APIRouter
 from pydantic import BaseModel
 
 from storage import db_instance
 
 # Create a FastAPI instance
-app = FastAPI()
+router = APIRouter()
 
 
 # Pydantic model for data sent by clients
@@ -15,7 +15,7 @@ class ClientData(BaseModel):
 
 
 # Endpoint to receive data from clients
-@app.post("/sync-data/")
+@router.post("/sync-data/")
 async def sync_data(data: ClientData):
     db = db_instance.get_session()
     try:
@@ -37,6 +37,6 @@ async def sync_data(data: ClientData):
     return {"message": "Data synchronized successfully"}
 
 
-@app.post("/optimize_dosage")
+@router.post("/optimize_dosage")
 async def optimize_dosage():
     db = db_instance.get_session()

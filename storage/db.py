@@ -1,16 +1,17 @@
 from os import getenv
-from typing import Any, Type, Dict
+from typing import Any, Type, Dict, List, TypeVar
 
 from dotenv import load_dotenv
 
-from sqlalchemy import create_engine, and_, or_, Column
-from sqlalchemy.orm import sessionmaker, scoped_session
+from sqlalchemy import create_engine, and_, or_, Column, select
+from sqlalchemy.orm import sessionmaker, scoped_session, joinedload
 
 from models.base_model import BaseModel
-from models.drug import DrugsModel
-from models.ddi import DDIModel
 
 load_dotenv()
+
+
+T = TypeVar('T', bound=BaseModel)
 
 
 class DBStorage:
@@ -33,15 +34,22 @@ class DBStorage:
 
         self.reload()
 
-    def new(self, obj: BaseModel):
+    def new(self, obj: T, commit: bool = True):
         self.__session.add(obj)
-        self.__session.commit()
+        if commit:
+            self.__session.commit()
 
-    def remove(self, obj: BaseModel):
+    def remove(self, obj: T, commit: bool = True):
         self.__session.delete(obj)
-        self.__session.commit()
+        if commit:
+            self.__session.commit()
 
-    async def all(self, cls: Type[BaseModel]):
+    def update(self, obj: T, commit: bool = True):
+        self.__session.merge(obj)
+        if commit:
+            self.__session.commit()
+
+    async def all(self, cls: Type[T]):
         dic = {}
         query = self.__session.query(cls)
         for element in query:
@@ -49,7 +57,7 @@ class DBStorage:
             dic[key] = element
         return dic
 
-    async def search_for(self, model: Type[BaseModel], filters: Dict[Column, Any], operator='or'):
+    async def search_for(self, model: Type[T], filters: Dict[Column, Any], operator='or') -> List[T]:
         """
         Generalized function to filter records based on model and filters provided.
 
@@ -75,7 +83,7 @@ class DBStorage:
 
         return query.all()
 
-    async def count(self, model: Type[BaseModel], filters: Dict[Column, Any], operator='or'):
+    async def count(self, model: Type[T], filters: Dict[Column, Any], operator='or') -> int:
         if not filters:
             return self.__session.query(model).count()
         conditions = []
@@ -92,11 +100,11 @@ class DBStorage:
 
         return query.count()
 
-    async def filter(self, cls: Type[BaseModel], **kwargs):
+    async def filter(self, cls: Type[T], **kwargs):
         """Filters objects based on the provided class and column-value pairs.
 
         Args:
-            cls (BaseModel): The class object to filter.
+            cls (T): The class object to filter.
             **kwargs: Keyword arguments representing column names and their values
                     to filter by.
 
@@ -119,25 +127,12 @@ class DBStorage:
 
         return query.all()
 
-    async def get_by_attr(self, cls: Type[BaseModel], key: str, attr: Any):
+    async def get_by_attr(self, cls: Type[T], key: str, attr: Any):
         result = self.__session.query(cls).filter_by(**{key: attr}).first()
         return result
 
-    async def join(self, primary_model: Type[BaseModel], related_model: Type[BaseModel],
-             join_condition: Any, filters: Dict[str, Any] = None):
-        query = self.__session.query(primary_model).join(related_model, join_condition)
-
-        if filters:
-            for key, value in filters.items():
-                if isinstance(value, str):
-                    query = query.filter(primary_model.__dict__[key].ilike(f"%{value}%"))
-                else:
-                    query = query.filter(primary_model.__dict__[key] == value)
-
-        return query.all()
-
-    async def get_by_id(self, cls: Type[BaseModel], id: int):
-        result = self.__session.query(cls).filter_by(id=id).first()
+    async def get_by_id(self, cls: Type[T], id: int):
+        result = self.__session.query(cls).filter_by(_id=id).first()
         return result
 
     def reload(self):

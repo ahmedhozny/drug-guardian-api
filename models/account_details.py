@@ -1,29 +1,16 @@
-import uuid
-from sqlalchemy import Column, Integer, ForeignKey, String, DateTime, Boolean, Text, BINARY
+from sqlalchemy import Column, Integer, ForeignKey, String, BINARY
 from sqlalchemy.orm import relationship
 
-from models import BaseModel
-from models import OrganisationsModel
-from models.uuid_registry import UuidRegistry
+from models import BaseModel, AccountTypes
 
 
-class AccountDataModel(BaseModel):
-	__tablename__ = 'account_details'
+class AccountDetails(BaseModel):
+    __tablename__ = 'account_details'
 
-	_id = Column(Integer, name="id", primary_key=True, autoincrement=True)
-	first_name = Column(String(50), nullable=False)
-	last_name = Column(String(50), nullable=False)
-	email = Column(String(301), nullable=False)
-	phone = Column(String(32), nullable=False)
-	job_title = Column(String(255), nullable=False)
-	address = Column(String(255), nullable=False)
-	birthday = Column(DateTime, nullable=False)
-	gender = Column(Boolean, nullable=False)
-	registered_on = Column(DateTime, nullable=False)
-	active = Column(Boolean, nullable=False, default=False)
-	notes = Column(Text, nullable=True)
-	organisation_id = Column(Integer, ForeignKey(OrganisationsModel._id))
-	uuid = Column(BINARY(16), ForeignKey(UuidRegistry.uuid), nullable=False, default=uuid.uuid4)
+    _id = Column(Integer, name="id", primary_key=True, autoincrement=True)
+    account_type_id = Column(Integer, ForeignKey(AccountTypes._id), nullable=False)
+    organization_uuid = Column(BINARY(16), nullable=False)
+    principal = Column(String(255), nullable=False, unique=True)
+    account_status = Column(String(50), nullable=False)
 
-	organisation = relationship('OrganisationsModel', foreign_keys=[organisation_id])
-	uuid_registry = relationship('UuidRegistry', foreign_keys=[uuid])
+    account_type = relationship(AccountTypes, foreign_keys=[account_type_id])

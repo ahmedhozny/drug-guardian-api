@@ -29,7 +29,7 @@ if test_protected:
     }
 
     # Make the HTTP request
-    url = "http://api.drugguardian.net/"
+    url = "http://api.drugguardian.net/token"
     response = requests.get(url, headers=headers)
 
     print(response.headers)
