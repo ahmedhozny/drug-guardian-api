@@ -1,10 +1,11 @@
+import random
 from os import getenv
-
 from dotenv import load_dotenv
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from models import BaseModel, DrugsModel, DDIModel
 
+# Load environment variables
 load_dotenv()
 
 user = getenv("DB_USER")
@@ -13,10 +14,10 @@ db = getenv("DB_NAME")
 host = getenv("DB_SERVER")
 env = getenv("DB_TEST")
 
+# Create engine
 engine = create_engine('mysql+mysqldb://{}:{}@{}/{}'
                        .format(user, passwd, host, db),
                        pool_pre_ping=True)
-
 
 # Create all tables
 BaseModel.metadata.create_all(engine)
@@ -25,7 +26,7 @@ BaseModel.metadata.create_all(engine)
 Session = sessionmaker(bind=engine)
 session = Session()
 
-# Sample data
+# Sample drugs data
 sample_drugs = [
     {
         "drug_ref": "A123456",
@@ -136,11 +137,17 @@ for drug_data in sample_drugs:
 
 session.commit()
 
-# Sample drug-drug interactions data
+# Generate and insert dummy interactions
+all_drug_refs = [
+    "A123456", "B234567", "C345678", "D456789", "E567890",
+    "F678901", "G789012", "H890123", "I901234", "J012345"
+]
+
 interactions_data = [
-    {"drug_ref_1": "A123456", "drug_ref_2": "B234567", "interaction": 1},
-    {"drug_ref_1": "A123456", "drug_ref_2": "C345678", "interaction": 0},
-    {"drug_ref_1": "B234567", "drug_ref_2": "D456789", "interaction": 1}
+    {"drug_ref_1": drug1, "drug_ref_2": drug2, "interaction": random.randint(0, 1)}
+    for i, drug1 in enumerate(all_drug_refs)
+    for j, drug2 in enumerate(all_drug_refs)
+    if i < j
 ]
 
 # Insert sample drug-drug interactions into the database
