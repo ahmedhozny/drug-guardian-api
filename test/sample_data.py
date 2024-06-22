@@ -89,7 +89,7 @@ sample_drugs = [
         "drug_bank_ref": 345678
     },
     {  # New drug - Fluoxetine
-        "drug_ref": "G789012",
+            "drug_ref": "G789012",
         "drug_name": "Fluoxetine",
         "brand_name": "Prozac",
         "indications": "Depression treatment",
@@ -148,6 +148,11 @@ interactions_data = [
     for i, drug1 in enumerate(all_drug_refs)
     for j, drug2 in enumerate(all_drug_refs)
     if i < j
+]
+
+interactions_data += [
+    {"drug_ref_1": interaction["drug_ref_2"], "drug_ref_2": interaction["drug_ref_1"], "interaction": interaction["interaction"]}
+    for interaction in interactions_data
 ]
 
 # Insert sample drug-drug interactions into the database
