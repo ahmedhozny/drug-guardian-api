@@ -1,9 +1,11 @@
 import logging
+from typing import List
 
 from dotenv import load_dotenv
-from fastapi import FastAPI
+from fastapi import FastAPI, Form, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
+from fastapi import Request
 from starlette.staticfiles import StaticFiles
 
 # from authentication.kerberos import KerberosMiddleware, create_access_token, get_current_user, get_auth_header, \
@@ -53,6 +55,29 @@ def favicon():
     return FileResponse("favicon.ico")
 
 
+@app.post("/submit-request")
+async def submit_request(
+        first_name: str = Form(...),
+        last_name: str = Form(...),
+        email: str = Form(...),
+        message: str = Form(...),
+        file: UploadFile = File(...)
+):
+    # Process the form data here
+    file_info = {
+        "filename": file.filename,
+        "content_type": file.content_type,
+    }
+
+    response_data = {
+        "first_name": first_name,
+        "last_name": last_name,
+        "email": email,
+        "message": message,
+        "file": file_info
+    }
+
+    return response_data
 # @app.get("/token", response_model=TokenBase)
 # async def token(
 #     response: Response,

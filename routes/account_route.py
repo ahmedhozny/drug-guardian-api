@@ -3,7 +3,7 @@ from typing import List, Annotated, Union
 from fastapi import APIRouter, Depends, HTTPException, Header
 from fastapi.security import OAuth2PasswordRequestForm
 from starlette import status
-from starlette.responses import RedirectResponse
+from starlette.responses import RedirectResponse, Response, JSONResponse
 
 from authentication.auth_bearer import AuthBearer
 from authentication.auth_kerberos import AuthKerberos
@@ -85,7 +85,12 @@ async def login(
         )
 
     res = await login_handling(auth_bearer, username=form_data.username, password=form_data.password)
-    return {"access_token": res.access_token, "token_type": res.token_type}
+
+    # Create a response with the access token and set it as a cookie
+    response = JSONResponse(content={"access_token": res.access_token, "token_type": res.token_type})
+    response.set_cookie(key="access_token", value=res.access_token, httponly=True)  # Set httponly for security
+
+    return response
 
 
 @router.get("/accounts/")
