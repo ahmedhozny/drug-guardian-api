@@ -34,6 +34,12 @@ class DDIChecker(BaseModel):
     drugs: List[str]
 
 
+class SideEffectsPrediction(BaseModel):
+    drug1Id: int
+    drug2Id: int
+    sideEffectId: str
+
+
 class HealthcareSignupRequest(BaseModel):
     organization_name: str = Field(..., example="Heartbeats", min_length=1)
     email: EmailStr

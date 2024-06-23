@@ -12,6 +12,7 @@ from starlette.staticfiles import StaticFiles
 #     authenticate_kerberos
 from logger import uvicorn_logger, get_uvicorn_logger_config
 from routes import drugs_route, account_route, download_route
+from schemas import SideEffectsPrediction
 from storage import Storage
 
 load_dotenv()
@@ -38,6 +39,7 @@ Storage.get_db_instance().reload()
 app.include_router(drugs_route.router, prefix="/drugs", tags=["drugs"])
 app.include_router(account_route.router, prefix="/account", tags=["account"])
 app.include_router(download_route.router, prefix="/download", tags=["download"])
+
 
 # @app.get("/protected", dependencies=[Depends(get_current_user)])
 # async def protected_route(request: Request):
@@ -78,6 +80,17 @@ async def submit_request(
     }
 
     return response_data
+
+
+@app.post("/predictSynergy")
+async def check_interactions(drug_1: str = Form(...), drug_2: str = Form(...)):
+    return {"message": "OK"}
+
+
+@app.post("/sideEffects")
+async def check_side_effects(response: SideEffectsPrediction):
+    return {"message": "OK"}
+
 # @app.get("/token", response_model=TokenBase)
 # async def token(
 #     response: Response,
