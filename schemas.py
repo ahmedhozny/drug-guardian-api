@@ -35,9 +35,9 @@ class DDIChecker(BaseModel):
 
 
 class SideEffectsPrediction(BaseModel):
-    drug1Id: int
-    drug2Id: int
-    sideEffectId: str
+    drug1_id: int
+    drug2_id: int
+    side_effect_id: str
 
 
 class HealthcareSignupRequest(BaseModel):
