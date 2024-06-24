@@ -1,8 +1,10 @@
 import logging
+import math
 from typing import List
 
+import requests
 from dotenv import load_dotenv
-from fastapi import FastAPI, Form, UploadFile, File
+from fastapi import FastAPI, Form, UploadFile, File, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi import Request
@@ -13,6 +15,7 @@ from starlette.staticfiles import StaticFiles
 from logger import uvicorn_logger, get_uvicorn_logger_config
 from routes import drugs_route, account_route, download_route
 from schemas import SideEffectsPrediction
+from services.other_services import check_server_health, find_lightest_instance
 from storage import Storage
 
 load_dotenv()
@@ -81,16 +84,30 @@ async def submit_request(
 
     return response_data
 
+servers_load = {
+    "http://34.34.86.5": 0,
+    "http://35.204.234.100": 0
+}
+
 
 @app.post("/predictSynergy")
 async def check_interactions(drug1_smiles: str = Form(...), drug2_smiles: str = Form(...)):
-    return {"synergy_score": 12.31421}
+    lowest_key = find_lightest_instance(servers_load)
+    servers_load[lowest_key] += 1
+    res = requests.post(lowest_key + "/synergy", json={"drug1_smiles": drug1_smiles, "drug2_smiles": drug2_smiles})
+    servers_load[lowest_key] -= 1
+    if res.status_code != 200:
+        raise HTTPException(res.status_code, detail=res.text)
+    return res.json()
 
 
 @app.post("/sideEffects")
 async def check_side_effects(response: SideEffectsPrediction):
-    d = {"drug1_name": "Drug A", "drug2_name": "Drug B", "side_effect_name": "A SIDE Effect", "predicted_label": 0, "predicted_score": 1.325235}
-    return d
+    lowest_key = find_lightest_instance(servers_load)
+    servers_load[lowest_key] += 1
+    res = requests.post(lowest_key + "/synergy", json=response)
+    servers_load[lowest_key] -= 1
+    return res.json()
 
 # @app.get("/token", response_model=TokenBase)
 # async def token(
