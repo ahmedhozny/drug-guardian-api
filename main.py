@@ -84,11 +84,12 @@ async def submit_request(
 
 @app.post("/predictSynergy")
 async def check_interactions(drug1_smiles: str = Form(...), drug2_smiles: str = Form(...)):
-    return {"message": "OK"}
+    return {"synergy_score": 12.31421}
 
 
 @app.post("/sideEffects")
 async def check_side_effects(response: SideEffectsPrediction):
+    d = {"drug1_name": "Drug A", "drug2_name": "Drug B", "side_effect_name": "A SIDE Effect", "predicted_label": 0, "predicted_score": 1.325235}
     return {"message": "OK"}
 
 # @app.get("/token", response_model=TokenBase)
