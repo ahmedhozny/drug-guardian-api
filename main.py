@@ -83,7 +83,7 @@ async def submit_request(
 
 
 @app.post("/predictSynergy")
-async def check_interactions(drug_1: str = Form(...), drug_2: str = Form(...)):
+async def check_interactions(drug1_smiles: str = Form(...), drug2_smiles: str = Form(...)):
     return {"message": "OK"}
 
 
