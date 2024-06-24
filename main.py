@@ -105,7 +105,7 @@ async def check_interactions(drug1_smiles: str = Form(...), drug2_smiles: str = 
 async def check_side_effects(response: SideEffectsPrediction):
     lowest_key = find_lightest_instance(servers_load)
     servers_load[lowest_key] += 1
-    res = requests.post(lowest_key + "/synergy", json=response)
+    res = requests.post(lowest_key + "/synergy", json=response.json())
     servers_load[lowest_key] -= 1
     return res.json()
 
