@@ -105,9 +105,20 @@ async def check_interactions(drug1_smiles: str = Form(...), drug2_smiles: str = 
 async def check_side_effects(response: SideEffectsPrediction):
     lowest_key = find_lightest_instance(servers_load)
     servers_load[lowest_key] += 1
-    res = requests.post(lowest_key + "/synergy", json=response.json())
-    servers_load[lowest_key] -= 1
-    return res.json()
+    try:
+        res = requests.post(lowest_key + "/side_effects", json=response.dict())
+        servers_load[lowest_key] -= 1
+        if res.status_code == 200:
+            try:
+                return res.json()
+            except requests.exceptions.JSONDecodeError:
+                raise HTTPException(status_code=500, detail="Invalid JSON response from server")
+        else:
+            raise HTTPException(status_code=res.status_code, detail=res.text)
+    except requests.exceptions.RequestException as e:
+        servers_load[lowest_key] -= 1
+        raise HTTPException(status_code=500, detail=str(e))
+
 
 # @app.get("/token", response_model=TokenBase)
 # async def token(
