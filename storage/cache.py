@@ -4,18 +4,28 @@ from datetime import datetime
 from typing import Union, Optional, TypeVar, Type, Dict, Any, List
 import redis
 from sqlalchemy import Column
-
 from models import BaseModel
 
+# Type variable bound to BaseModel
 T = TypeVar('T', bound=BaseModel)
 
-
 def _to_attribute_string(attributes: Dict[Column, Any]) -> str:
+    """
+    Converts a dictionary of attributes to a string format.
+
+    :param attributes: Dictionary of attributes to convert.
+    :return: String representation of the attributes.
+    """
     attributes_list = [f"{key.name}={value}" for key, value in attributes.items()]
     return "\t".join(attributes_list)
 
-
 def _from_attribute_string(attribute_string: str) -> Dict[Column, Any]:
+    """
+    Converts a string of attributes back to a dictionary format.
+
+    :param attribute_string: String representation of the attributes.
+    :return: Dictionary of attributes.
+    """
     attributes = {}
     pairs = attribute_string.split("\t")
     for pair in pairs:
@@ -24,23 +34,36 @@ def _from_attribute_string(attribute_string: str) -> Dict[Column, Any]:
         attributes[column] = value
     return attributes
 
-
 def is_base64(s: str) -> bool:
+    """
+    Checks if a given string is a valid Base64 encoded string.
+
+    :param s: String to check.
+    :return: True if the string is Base64 encoded, otherwise False.
+    """
     try:
         return base64.b64encode(base64.b64decode(s)) == s.encode('utf-8')
     except Exception:
         return False
 
 def is_isoformat(s: str) -> bool:
+    """
+    Checks if a given string is in ISO 8601 date format.
+
+    :param s: String to check.
+    :return: True if the string is in ISO 8601 format, otherwise False.
+    """
     try:
         datetime.fromisoformat(s)
         return True
     except ValueError:
         return False
 
-
 class Cache:
     def __init__(self):
+        """
+        Initializes the Cache class with a connection to the Redis database.
+        """
         self._redis = redis.StrictRedis(host='localhost', port=6379, db=1)
 
     def store(self, obj: T, expire_in: Optional[int] = None):
@@ -54,7 +77,7 @@ class Cache:
         dict_obj = obj.to_dict()
         self._redis.set(cache_key, json.dumps(dict_obj), ex=expire_in)
 
-    async def get(self, model: Type[T], id: int, expire_in: Optional[int] = None) -> T | None:
+    async def get(self, model: Type[T], id: int, expire_in: Optional[int] = None) -> Optional[T]:
         """
         Retrieves an object by its ID from the Redis database and reconstructs it into the model instance.
 
@@ -138,7 +161,7 @@ class Cache:
 
         res = []
         for member in members:
-            obj = await self.get(model, member.decode("utf-8"))
+            obj = await self.get(model, int(member.decode("utf-8")))
             if obj:
                 res.append(obj)
         return res
@@ -146,6 +169,8 @@ class Cache:
     def invalidate_cache_for_table(self, model: Type[T]) -> None:
         """
         Invalidates all cache entries related to a specific table.
+
+        :param model: The model class whose cache entries are to be invalidated.
         """
         cursor = 0
         keys = []

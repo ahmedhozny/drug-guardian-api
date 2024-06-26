@@ -11,8 +11,8 @@ from authentication.authentication import Authentication
 from models import HospitalModel, BaseModel, EmailAddresses, PharmaceuticalModel, \
     ResearcherModel
 from schemas import TokenBase
-from services.client import hospital_signup_request, hospital_signup_request_handle, verification_handling, \
-    signup_handling, login_handling
+from services.client import hospital_signup_request, signup_request_handle, verification_handling, \
+    signup_handling, login_handling, pharmaceutical_signup_request
 from storage import Storage
 
 router = APIRouter()
@@ -23,6 +23,11 @@ combined_auth = Authentication("HTTP/api.drugguardian.net@MEOW")
 
 @router.post("/healthcare", status_code=status.HTTP_201_CREATED)
 async def create_healthcare(hosp=Depends(hospital_signup_request)):
+    return hosp
+
+
+@router.post("/pharmaceutical", status_code=status.HTTP_201_CREATED)
+async def create_healthcare(hosp=Depends(pharmaceutical_signup_request)):
     return hosp
 
 
@@ -49,7 +54,7 @@ async def get_pending(org: str):
 
 
 @router.post("/pending", status_code=status.HTTP_201_CREATED)
-async def update_pending(res=Depends(hospital_signup_request_handle)):
+async def update_pending(res=Depends(signup_request_handle)):
     return res
 
 
@@ -68,7 +73,7 @@ async def get_registration(email: str, token: str):
     return "OK"
 
 
-@router.post("/register_step", status_code=status.HTTP_201_CREATED)
+@router.post("/register_step", status_code=status.HTTP_202_ACCEPTED)
 async def post_registration(res=Depends(signup_handling)):
     return {"keytab": res["keytab_password"]}
 

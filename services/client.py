@@ -18,7 +18,7 @@ from models import HospitalModel, AddressModel, UuidRegistry, AccountDetails, Ac
     AccountTypes, AccountSecurity
 from models import EmailAddresses
 from models import ResearcherModel
-from schemas import HealthcareSignupRequest, HealthcareSignupHandle, LoginBase
+from schemas import HealthcareSignupRequest, SignupHandle, LoginBase
 from storage import Storage
 from utils.email import send_email_async
 
@@ -52,6 +52,31 @@ def generate_password(length=12, include_uppercase=True, include_lowercase=True,
     return password
 
 
+def addAddress(address: schemas.Address) -> AddressModel | None:
+    if address is None:
+        return None
+
+    if address.get("country") is None:
+        raise HTTPException(status_code=400, detail="Missing country")
+
+    if address.get("state") is None:
+        raise HTTPException(status_code=400, detail="Missing state")
+
+    if address.get("city") is None:
+        raise HTTPException(status_code=400, detail="Missing city")
+
+    if address.get("street") is None:
+        raise HTTPException(status_code=400, detail="Missing street")
+
+    if address.get("zip") is None:
+        raise HTTPException(status_code=400, detail="Missing zip")
+
+    address_uuid = UuidRegistry.add_uuid_entry(AddressModel).uuid
+    db_address = AddressModel(uuid=address_uuid, **address.model_dump())
+    Storage.new_object(db_address)
+    return db_address
+
+
 def hospital_signup_request(request_scheme: HealthcareSignupRequest):
     hospital_model = request_scheme.model_dump()
     if hospital_model.get("organization_name").strip() == "":
@@ -61,8 +86,7 @@ def hospital_signup_request(request_scheme: HealthcareSignupRequest):
     if asyncio.run(Storage.db_instance.count(HospitalModel, {HospitalModel.phone: request_scheme.phone})) > 0:
         raise HTTPException(400, "Phone already registered")
 
-    address_uuid = UuidRegistry.add_uuid_entry(AddressModel).uuid
-    db_address = AddressModel(uuid=address_uuid, **hospital_model["address"])
+    db_address = addAddress(hospital_model["address"])
     Storage.new_object(db_address)
     hospital_uuid = UuidRegistry.add_uuid_entry(HospitalModel).uuid
     db_email = EmailAddresses(
@@ -81,26 +105,61 @@ def hospital_signup_request(request_scheme: HealthcareSignupRequest):
     return {"email": db_email.email, "organization_name": db_hosp.name}
 
 
-async def hospital_signup_request_handle(handle_scheme: HealthcareSignupHandle):
-    res: List[EmailAddresses] = await Storage.find(EmailAddresses, {EmailAddresses.email: handle_scheme.email})
-    res_email = res[0].email
-    if len(res) < 1:
-        raise HTTPException(400, "No hospital registered")
-    res2: List[HospitalModel] = await Storage.find(HospitalModel, {HospitalModel.uuid_registry: res[0].organization_uuid})
-    hosp = res2[0]
-    if not handle_scheme.confirm:
-        Storage.update_object(hosp, {HospitalModel.status: "Rejected"})
-        return {"email": res_email, "action": "rejected"}
+def pharmaceutical_signup_request(request_scheme: schemas.PharmaceuticalSignupRequest):
+    pharm_model = request_scheme.model_dump()
+    if pharm_model.get("organization_name").strip() == "":
+        raise HTTPException(400, "Company Name cannot be empty")
+    if asyncio.run(Storage.db_instance.count(EmailAddresses, {EmailAddresses.email: request_scheme.email})) > 0:
+        raise HTTPException(400, "Email already registered")
+    if asyncio.run(Storage.db_instance.count(PharmaceuticalModel, {PharmaceuticalModel.phone: request_scheme.phone})) > 0:
+        raise HTTPException(400, "Phone already registered")
+
+    db_address = addAddress(pharm_model["address"])
+    Storage.new_object(db_address)
+    pharm_uuid = UuidRegistry.add_uuid_entry(HospitalModel).uuid
+    db_email = EmailAddresses(
+        organization_uuid=pharm_uuid,
+        email=pharm_model["email"],
+    )
+    Storage.new_object(db_email)
+    db_hosp = HospitalModel(
+        name=pharm_model["organization_name"],
+        phone=pharm_model["phone"],
+        address_uuid=db_address.uuid,
+        status="Unconfirmed",
+        uuid_registry=pharm_model,
+    )
+    Storage.new_object(db_hosp)
+    return {"email": db_email.email, "organization_name": db_hosp.name}
+
+
+async def signup_request_handle(handle_scheme: SignupHandle):
+    res_list: List[EmailAddresses] = await Storage.find(EmailAddresses, {EmailAddresses.email: handle_scheme.email})
+    if len(res_list) < 1:
+        raise HTTPException(400, "No organization registered with this email")
+    res = res_list[0]
+    uuid_res: UuidRegistry = Storage.find(UuidRegistry, {UuidRegistry.uuid: handle_scheme.uuid})[0]
+    table_name = uuid_res.table_name
+    if table_name == "hospital":
+        res2: List[HospitalModel] = await Storage.find(HospitalModel, {HospitalModel.uuid_registry: res.organization_uuid})
+    elif table_name == "pharmaceutical":
+        res2: List[PharmaceuticalModel] = await Storage.find(PharmaceuticalModel, {PharmaceuticalModel.uuid_registry: res.organization_uuid})
     else:
-        Storage.update_object(hosp, {HospitalModel.status: "Confirmed"})
-        encoded_jwt = jwt.encode({"sub": res_email, "iat": datetime.datetime.utcnow()}, "SeCrEt", "HS256")
-        Storage.new_object(AccountVerification(uuid_registry=hosp.uuid_registry, token=encoded_jwt))
+        raise HTTPException(400, "Not an organization email")
+    organization = res2[0]
+    if not handle_scheme.confirm:
+        Storage.update_object(organization, {organization.status: "Rejected"})
+        return {"email": res.email, "action": "rejected"}
+    else:
+        Storage.update_object(organization, {organization.status: "Confirmed"})
+        encoded_jwt = jwt.encode({"sub": res.email, "iat": datetime.datetime.utcnow()}, "SeCrEt", "HS256")
+        Storage.new_object(AccountVerification(uuid_registry=organization.uuid_registry, token=encoded_jwt))
 
         # await send_email_async("Drugguardian Account Registration",
         #                  res_email,
         #                  f"http://api.drugguardian.net/account/verify?token={encoded_jwt}"
         #                  )
-        return {"email": res_email, "action": "accepted"}
+        return {"email": res.email, "action": "accepted"}
 
 
 async def verification_handling(token: str):
@@ -147,7 +206,7 @@ async def signup_handling(handle_scheme: schemas.AccountRegister):
     )
 
     Storage.new_object(account)
-
+    Storage.update_object(account, {})
     keytab_password = generate_password()
     Storage.new_object(AccountSecurity(
         account_id=account.id,

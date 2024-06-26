@@ -47,11 +47,14 @@ class HealthcareSignupRequest(BaseModel):
     address: Address
 
 
-class HealthcareSignupRequestUUID(HealthcareSignupRequest):
-    uuid: str
+class PharmaceuticalSignupRequest(BaseModel):
+    organization_name: str = Field(..., example="Pharma Med", min_length=1)
+    email: EmailStr
+    phone: PhoneNumber = Field(..., example="+201221234567")
+    address: Address
 
 
-class HealthcareSignupHandle(BaseModel):
+class SignupHandle(BaseModel):
     email: EmailStr
     confirm: bool
 

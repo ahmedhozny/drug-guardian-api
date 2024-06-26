@@ -17,8 +17,7 @@ class Authentication:
         self, authorization: Annotated[Union[str, None], Header()] = None, token: str = Depends(AuthBearer.oauth2_scheme)
     ):
         try:
-            username, gssresp = self.kerberos_auth(authorization)
-            return {"username": username, "gss_response": gssresp}
+            return self.kerberos_auth(authorization)
         except HTTPException as kerberos_exc:
             if kerberos_exc.status_code == status.HTTP_401_UNAUTHORIZED:
                 try:

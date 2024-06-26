@@ -1,17 +1,12 @@
 import logging
-import math
-from typing import List
 
 import requests
 from dotenv import load_dotenv
 from fastapi import FastAPI, Form, UploadFile, File, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
-from fastapi import Request
 from starlette.staticfiles import StaticFiles
 
-# from authentication.kerberos import KerberosMiddleware, create_access_token, get_current_user, get_auth_header, \
-#     authenticate_kerberos
 from logger import uvicorn_logger, get_uvicorn_logger_config
 from routes import drugs_route, account_route, download_route
 from schemas import SideEffectsPrediction
@@ -20,12 +15,21 @@ from storage import Storage
 
 load_dotenv()
 
+# Configure logging
 logging.config.dictConfig(get_uvicorn_logger_config())
 
+# Dictionary to keep track of server load
+model_instances_load = {
+    "http://34.34.86.5": 0,
+    "http://35.204.234.100": 0
+}
+
+# Initialize FastAPI application
 app = FastAPI()
 
 uvicorn_logger.info("Starting API..")
 
+# Add middleware to handle CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -34,11 +38,13 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# app.add_middleware(KerberosMiddleware)
+# Mount static files
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
+# Initialize database
 Storage.get_db_instance().reload()
 
+# Include route modules
 app.include_router(drugs_route.router, prefix="/drugs", tags=["drugs"])
 app.include_router(account_route.router, prefix="/account", tags=["account"])
 app.include_router(download_route.router, prefix="/download", tags=["download"])
@@ -52,13 +58,32 @@ app.include_router(download_route.router, prefix="/download", tags=["download"])
 
 @app.get("/")
 def health():
+    """
+    Health check endpoint.
+    Returns a message indicating that the API is up and running.
+    """
     return {"message": "API is up and running!"}
 
 
 @app.get("/favicon.ico")
 def favicon():
+    """
+    Endpoint to serve the favicon.
+    """
     return FileResponse("favicon.ico")
 
+
+import os
+from fastapi import FastAPI, Form, File, UploadFile, HTTPException
+from fastapi.responses import JSONResponse
+from pathlib import Path
+
+app = FastAPI()
+
+UPLOAD_DIRECTORY = "uploads/"  # Directory where files will be stored
+
+# Ensure the upload directory exists
+Path(UPLOAD_DIRECTORY).mkdir(parents=True, exist_ok=True)
 
 @app.post("/submit-request")
 async def submit_request(
@@ -68,7 +93,27 @@ async def submit_request(
         message: str = Form(...),
         file: UploadFile = File(...)
 ):
-    # Process the form data here
+    """
+    Endpoint to submit a request with form data and a file upload.
+
+    Args:
+        first_name (str): First name of the user.
+        last_name (str): Last name of the user.
+        email (str): Email of the user.
+        message (str): Message from the user.
+        file (UploadFile): Uploaded file.
+
+    Returns:
+        dict: A dictionary containing the submitted data and file information.
+    """
+    try:
+        # Save the uploaded file
+        file_location = os.path.join(UPLOAD_DIRECTORY, file.filename)
+        with open(file_location, "wb") as f:
+            f.write(await file.read())
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"File upload failed: {str(e)}")
+
     file_info = {
         "filename": file.filename,
         "content_type": file.content_type,
@@ -82,20 +127,25 @@ async def submit_request(
         "file": file_info
     }
 
-    return response_data
-
-servers_load = {
-    "http://34.34.86.5": 0,
-    "http://35.204.234.100": 0
-}
+    return JSONResponse(content=response_data)
 
 
 @app.post("/predictSynergy")
 async def check_interactions(drug1_smiles: str = Form(...), drug2_smiles: str = Form(...)):
-    lowest_key = find_lightest_instance(servers_load)
-    servers_load[lowest_key] += 1
+    """
+    Endpoint to check drug synergy interactions.
+
+    Args:
+        drug1_smiles (str): SMILES representation of the first drug.
+        drug2_smiles (str): SMILES representation of the second drug.
+
+    Returns:
+        dict: The response from the synergy prediction server.
+    """
+    lowest_key = find_lightest_instance(model_instances_load)
+    model_instances_load[lowest_key] += 1
     res = requests.post(lowest_key + "/synergy", json={"drug1_smiles": drug1_smiles, "drug2_smiles": drug2_smiles})
-    servers_load[lowest_key] -= 1
+    model_instances_load[lowest_key] -= 1
     if res.status_code != 200:
         raise HTTPException(res.status_code, detail=res.text)
     return res.json()
@@ -103,11 +153,20 @@ async def check_interactions(drug1_smiles: str = Form(...), drug2_smiles: str = 
 
 @app.post("/sideEffects")
 async def check_side_effects(response: SideEffectsPrediction):
-    lowest_key = find_lightest_instance(servers_load)
-    servers_load[lowest_key] += 1
+    """
+    Endpoint to check side effects of drugs.
+
+    Args:
+        response (SideEffectsPrediction): The prediction response object.
+
+    Returns:
+        dict: The response from the side effects prediction server.
+    """
+    lowest_key = find_lightest_instance(model_instances_load)
+    model_instances_load[lowest_key] += 1
     try:
         res = requests.post(lowest_key + "/side_effects", json=response.dict())
-        servers_load[lowest_key] -= 1
+        model_instances_load[lowest_key] -= 1
         if res.status_code == 200:
             try:
                 return res.json()
@@ -116,9 +175,8 @@ async def check_side_effects(response: SideEffectsPrediction):
         else:
             raise HTTPException(status_code=res.status_code, detail=res.text)
     except requests.exceptions.RequestException as e:
-        servers_load[lowest_key] -= 1
+        model_instances_load[lowest_key] -= 1
         raise HTTPException(status_code=500, detail=str(e))
-
 
 # @app.get("/token", response_model=TokenBase)
 # async def token(
