@@ -1,7 +1,9 @@
 from fastapi import HTTPException, Depends, APIRouter
 from pydantic import BaseModel
 
-from storage import db_instance
+from storage import Storage
+
+#Future work
 
 # Create a FastAPI instance
 router = APIRouter()
@@ -17,7 +19,7 @@ class ClientData(BaseModel):
 # Endpoint to receive data from clients
 @router.post("/sync-data/")
 async def sync_data(data: ClientData):
-    db = db_instance.get_session()
+    db = Storage.db_instance.get_session()
     try:
         # Store the received data in the server database
         # Example: Insert data into a server table
@@ -39,4 +41,4 @@ async def sync_data(data: ClientData):
 
 @router.post("/optimize_dosage")
 async def optimize_dosage():
-    db = db_instance.get_session()
+    db = Storage.db_instance.get_session()

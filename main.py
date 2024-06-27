@@ -2,7 +2,7 @@ import logging
 
 import requests
 from dotenv import load_dotenv
-from fastapi import FastAPI, Form, UploadFile, File, HTTPException
+from fastapi import FastAPI, Form, UploadFile, File, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from starlette.staticfiles import StaticFiles
@@ -81,6 +81,7 @@ from pathlib import Path
 app = FastAPI()
 
 UPLOAD_DIRECTORY = "uploads/"  # Directory where files will be stored
+os.makedirs(UPLOAD_DIRECTORY, exist_ok=True)
 
 # Ensure the upload directory exists
 Path(UPLOAD_DIRECTORY).mkdir(parents=True, exist_ok=True)
@@ -91,7 +92,8 @@ async def submit_request(
         last_name: str = Form(...),
         email: str = Form(...),
         message: str = Form(...),
-        file: UploadFile = File(...)
+        file: UploadFile = File(...),
+        user = Depends(account_route.auth_bearer.get_current_user)
 ):
     """
     Endpoint to submit a request with form data and a file upload.

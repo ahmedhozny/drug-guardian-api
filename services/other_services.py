@@ -1,14 +1,7 @@
 import math
-from typing import Type
 
 import requests
 from fastapi import HTTPException
-
-import schemas
-from models import BaseModel
-from models.addresses import AddressModel
-
-from storage import Storage
 
 
 def check_server_health(url: str):

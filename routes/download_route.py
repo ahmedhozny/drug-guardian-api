@@ -14,9 +14,9 @@ async def download(request: Request, os: str = Query(default=None)):
             raise HTTPException(400, "Unknown OS. Please enter query parameters to download specific OS")
     os = os.lower()
     if os == "win" or os == "windows":
-        return FileResponse("/home/ahmedh/test.txt", media_type="text/plain", filename="test.txt")
+        return FileResponse("/home/ahmedh/drugguardian_v1.exe", filename="drugguardian v1.exe")
     if os == "ubuntu" or os == "debian":
-        return FileResponse("/home/ahmedh/test.txt", media_type="text/plain", filename="test.txt")
+        return FileResponse("/home/ahmedh/drugguardian_v1.deb", filename="drugguardian v1.deb")
     return RedirectResponse(url="/download", headers=request.headers)
 
 

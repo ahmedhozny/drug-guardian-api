@@ -117,7 +117,7 @@ class AuthBearer:
         Storage.remove_object(token)
 
     @staticmethod
-    async def get_current_user(db: Session = Depends(get_storage), token: schemas.TokenBase = Depends()):
+    async def get_current_user(db: Session = Depends(get_storage), token: schemas.TokenBase = Depends()) -> AccountDetails:
         token = token.access_token
         try:
             payload = jwt.decode(token, AuthBearer.__secret, algorithms=["HS256"])

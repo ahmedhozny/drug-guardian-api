@@ -3,7 +3,6 @@ import base64
 import datetime
 import random
 import string
-import uuid
 from typing import List
 
 import gssapi
