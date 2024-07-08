@@ -28,7 +28,7 @@ class AuthBearer:
                 detail="Invalid authentication credentials",
                 headers={"WWW-Authenticate": "Bearer"},
             )
-        accounts: List[AccountBearer] = Storage.find(AccountBearer, {AccountBearer.access_token: token})
+        accounts: List[AccountBearer] = await Storage.find(AccountBearer, {AccountBearer.access_token: token})
         if len(accounts) == 0:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
