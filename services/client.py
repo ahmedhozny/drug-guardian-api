@@ -55,19 +55,19 @@ def addAddress(address: schemas.Address) -> AddressModel | None:
     if address is None:
         return None
 
-    if address.get("country") is None:
+    if address.country is None:
         raise HTTPException(status_code=400, detail="Missing country")
 
-    if address.get("state") is None:
+    if address.state is None:
         raise HTTPException(status_code=400, detail="Missing state")
 
-    if address.get("city") is None:
+    if address.city is None:
         raise HTTPException(status_code=400, detail="Missing city")
 
-    if address.get("street") is None:
+    if address.street is None:
         raise HTTPException(status_code=400, detail="Missing street")
 
-    if address.get("zip") is None:
+    if address.zip is None:
         raise HTTPException(status_code=400, detail="Missing zip")
 
     address_uuid = UuidRegistry.add_uuid_entry(AddressModel).uuid
@@ -85,7 +85,7 @@ def hospital_signup_request(request_scheme: HealthcareSignupRequest):
     if asyncio.run(Storage.db_instance.count(HospitalModel, {HospitalModel.phone: request_scheme.phone})) > 0:
         raise HTTPException(400, "Phone already registered")
 
-    db_address = addAddress(hospital_model["address"])
+    db_address = addAddress(schemas.Address(**hospital_model["address"]))
     Storage.new_object(db_address)
     hospital_uuid = UuidRegistry.add_uuid_entry(HospitalModel).uuid
     db_email = EmailAddresses(
@@ -113,7 +113,7 @@ def pharmaceutical_signup_request(request_scheme: schemas.PharmaceuticalSignupRe
     if asyncio.run(Storage.db_instance.count(PharmaceuticalModel, {PharmaceuticalModel.phone: request_scheme.phone})) > 0:
         raise HTTPException(400, "Phone already registered")
 
-    db_address = addAddress(pharm_model["address"])
+    db_address = addAddress(schemas.Address(**pharm_model["address"]))
     Storage.new_object(db_address)
     pharm_uuid = UuidRegistry.add_uuid_entry(HospitalModel).uuid
     db_email = EmailAddresses(
@@ -137,8 +137,9 @@ async def signup_request_handle(handle_scheme: SignupHandle):
     if len(res_list) < 1:
         raise HTTPException(400, "No organization registered with this email")
     res = res_list[0]
-    uuid_res: UuidRegistry = Storage.find(UuidRegistry, {UuidRegistry.uuid: handle_scheme.uuid})[0]
-    table_name = uuid_res.table_name
+    uuid_results: List[UuidRegistry] = await Storage.find(UuidRegistry, {UuidRegistry.uuid: res.organization_uuid})
+    uuid_res = uuid_results[0]
+    table_name = uuid_res.to_dict().get("table_name")
     if table_name == "hospital":
         res2: List[HospitalModel] = await Storage.find(HospitalModel, {HospitalModel.uuid_registry: res.organization_uuid})
     elif table_name == "pharmaceutical":
@@ -147,10 +148,10 @@ async def signup_request_handle(handle_scheme: SignupHandle):
         raise HTTPException(400, "Not an organization email")
     organization = res2[0]
     if not handle_scheme.confirm:
-        Storage.update_object(organization, {organization.status: "Rejected"})
+        Storage.update_object(organization, {type(organization).status: "Rejected"})
         return {"email": res.email, "action": "rejected"}
     else:
-        Storage.update_object(organization, {organization.status: "Confirmed"})
+        Storage.update_object(organization, {type(organization).status: "Confirmed"})
         encoded_jwt = jwt.encode({"sub": res.email, "iat": datetime.datetime.utcnow()}, "SeCrEt", "HS256")
         Storage.new_object(AccountVerification(uuid_registry=organization.uuid_registry, token=encoded_jwt))
 
@@ -195,12 +196,13 @@ async def signup_handling(handle_scheme: schemas.AccountRegister):
         "researcher": ResearcherModel,
     }
 
-    org_types: List[AccountTypes] = await Storage.find(AccountTypes, {AccountTypes.name: uuid_registry.table_name})
+    table_name = uuid_registry.to_dict().get("table_name")
+    org_types: List[AccountTypes] = await Storage.find(AccountTypes, {AccountTypes.name: table_name})
     org_type = org_types[0]
     account = AccountDetails(
         account_type_id=org_type.id,
         organization_uuid=uuid_registry.uuid,
-        principal=handle_scheme.principal + "/" + uuid_registry.table_name[0:4],
+        principal=handle_scheme.principal + "/" + table_name[0:4],
         account_status="Active"
     )
 

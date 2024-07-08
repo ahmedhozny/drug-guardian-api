@@ -21,14 +21,22 @@ class AuthBearer:
     __algorithm = 'HS256'
     oauth2_scheme = OAuth2PasswordBearer(tokenUrl="account/login")
 
-    async def __call__(self, token: str = Depends(oauth2_scheme)):
+    async def __call__(self, token: str = Depends(oauth2_scheme)) -> AccountDetails:
         if not self.verify_token(token):
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid authentication credentials",
                 headers={"WWW-Authenticate": "Bearer"},
             )
-        return token
+        accounts: List[AccountBearer] = Storage.find(AccountBearer, {AccountBearer.access_token: token})
+        if len(accounts) == 0:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Not a recorded token",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+        account: AccountBearer = accounts[0]
+        return account.account
 
     def verify_token(self, token: str) -> bool:
         try:
